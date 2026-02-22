@@ -1,0 +1,78 @@
+<script>
+	/**
+	 * Script para insertar los Estados de Usuario
+	 * Sprint 3 - Identificador Z: DC4
+	 */
+
+	const API_BASE = "http://100.27.173.196:3000";
+	const MI_Z = "DC4";
+
+	// Datos extraídos de la tabla image_205934.png
+	const estadosAGenerar = [
+		{
+			id: "ACT",
+			nombre: "Activo",
+			permite_acceso: "true",
+			descripcion: "Usuario con acceso total a la plataforma.",
+		},
+		{
+			id: "BAJ",
+			nombre: "Baja",
+			permite_acceso: "false",
+			descripcion:
+				"El usuario ya no pertenece al centro. Se mantienen datos pero no accede.",
+		},
+		{
+			id: "BLOQ",
+			nombre: "Bloqueado",
+			permite_acceso: "false",
+			descripcion: "Acceso restringido por seguridad o por el administrador.",
+		},
+		{
+			id: "GRAD",
+			nombre: "Graduado",
+			permite_acceso: "false",
+			descripcion: "Alumnos que han terminado su ciclo formativo.",
+		},
+		{
+			id: "TEMP",
+			nombre: "Baja Temporal",
+			permite_acceso: "false",
+			descripcion:
+				"Usuario fuera del sistema temporalmente (ej. enfermedad larga).",
+		},
+	];
+
+	async function insertarEstados() {
+		for (const estado of estadosAGenerar) {
+			try {
+				const payload = {
+					...estado,
+					zfecha: new Date().toISOString(), // Auditoría SAP
+					zusuario: MI_Z, // Auditoría SAP
+				};
+
+				const url = `${API_BASE}/estados_usuario?zusuario=${MI_Z}`;
+
+				const respuesta = await fetch(url, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(payload),
+				});
+
+				if (respuesta.ok) {
+					console.log(`✅ Estado '${estado.id}' insertado correctamente.`);
+				} else {
+					const err = await respuesta.json();
+					console.error(`❌ Error en '${estado.id}':`, err);
+				}
+			} catch (e) {
+				console.error("Fallo de red en la inserción", e);
+			}
+		}
+		alert("Proceso de creación de estados finalizado. Revisa la consola.");
+	}
+
+	// Ejecutar la función
+	insertarEstados();
+</script>

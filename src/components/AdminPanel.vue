@@ -1,43 +1,44 @@
 <script setup>
 /**
  * COMPONENTE: AdminPanel.vue
- * gestiona la navegacion interna de cada usuario
+ * Control de acceso basado en IDs de rol de la base de datos ("1", "2", "3", "4").
  */
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Profesores from './GestionProfesores.vue'
 import Alumnos from './GestionAlumnos.vue'
 import Cursos from './GestionCursos.vue'
-import Espacios from './GestionEspacios.vue' // H6: Lugares para reservas e incidencias
+import Espacios from './GestionEspacios.vue'
 import Etapas from './GestionEtapas.vue'
 import Turnos from './GestionTurnos.vue'
 import Departamento from './GestionDepartamentos.vue'
 import Roles from './GestionRoles.vue'
 
-// recibimos el usuario para saber que rol tiene y mostrarle sus opciones
+// Recibimos el objeto de autenticación completa
 const props = defineProps(['usuario']);
-// evento para poder hacer el logout
 const emit = defineEmits(['logout']);
 
-// Estado reactivo para saber qué componente hijo renderizar
 const seccionActual = ref('menu');
 
-// cambiamos el valor de la ref para que el v-else-if haga el cambio del render
-const irAMenu = () => seccionActual.value = 'menu';
-const irAProfesores = () => seccionActual.value = 'profesores';
-const irAAlumnos = () => seccionActual.value = 'alumnos';
-const irACursos = () => seccionActual.value = 'cursos';
-const irAEspacios = () => seccionActual.value = 'espacios';
-const irAEtapas = () => seccionActual.value = 'etapas';
-const irAturnos = () => seccionActual.value = 'turnos';
-const irAdepartamentos = () => seccionActual.value = 'departamentos';
-const irAroles = () => seccionActual.value = 'roles';
+onMounted(() => {
+    // Imprimimos la estructura exacta que devuelve tu API por consola
+    console.log("--- RESPUESTA API RECIBIDA ---");
+    console.log("Mensaje:", props.usuario.mensaje);
+    console.log("Login:", props.usuario.usuario);
+    console.log("Rol:", props.usuario.rol);
+    console.log("Nombre:", props.usuario.nombre);
+    console.log("Apellidos:", props.usuario.apellidos);
+});
 
+const irAMenu = () => seccionActual.value = 'menu';
 </script>
 
 <template>
     <div class="panel-container">
         <header>
-            <h3>Bienvenid@, {{ usuario.login }}</h3>
+            <div class="user-welcome">
+                <h3>Bienvenid@, {{ usuario.nombre }} {{ usuario.apellidos }}</h3>
+                <span class="badge-rol">{{ usuario.rol }}</span>
+            </div>
             <div class="header-buttons">
                 <button v-if="seccionActual !== 'menu'" @click="irAMenu" class="btn-primary">Volver al Panel</button>
                 <button @click="$emit('logout')" class="logout-btn">Cerrar Sesión</button>
@@ -45,87 +46,77 @@ const irAroles = () => seccionActual.value = 'roles';
         </header>
 
         <div v-if="seccionActual === 'menu'" class="acciones-grid">
-            <section v-if="usuario">
+
+            <section>
                 <h4>Servicios Generales</h4>
-                <button @click="crearIncidencia()" class="btn-primary">Crear Incidencia</button>
+                <button class="btn-primary">Crear Incidencia</button>
             </section>
 
-            <section v-if="[1, 2, 4].includes(Number(usuario.rol_id))">
+            <section v-if="['Administrador', 'Profesor'].includes(String(usuario.rol))">
                 <h4>Gestión de Espacios</h4>
-                <button @click="reservarAula" class="btn-accent">Reservar Aula</button>
+                <button class="btn-accent">Reservar Aula / Espacio</button>
             </section>
 
-            <section v-if="[1, 4].includes(Number(usuario.rol_id))">
+            <section v-if="['Administrador', 'Responsable TIC'].includes(String(usuario.rol))">
                 <h4>Mantenimiento TIC</h4>
-                <button @click="resolverIncidencia" class="btn-success">Resolver Incidencias</button>
+                <button class="btn-success">Resolver Incidencias</button>
             </section>
 
-            <section v-if="Number(usuario.rol_id) === 1">
-                <h4>Administración del Centro</h4>
+            <section v-if="usuario.rol == 'Administrador'" class="admin-zone">
+                <h4>Mantenimiento de Tablas (Acceso Total)</h4>
                 <div class="admin-buttons-container">
-                    <button @click="irAProfesores">Profesores (H3)</button>
-                    <button @click="irAAlumnos">Alumnos (H4)</button>
-                    <button @click="irACursos">Cursos (H5)</button>
-                    <button @click="irAEspacios">Espacios (H6)</button>
-                    <button @click="irAEtapas">Etapas (H8)</button>
-                    <button @click="irAturnos">Turnos (H9)</button>
-                    <button @click="irAdepartamentos">Departamentos (H10)</button>
-                    <button @click="irAroles">Roles (H11)</button>
+                    <button @click="seccionActual = 'profesores'">Profesores (H3)</button>
+                    <button @click="seccionActual = 'alumnos'">Alumnos (H4)</button>
+                    <button @click="seccionActual = 'cursos'">Cursos (H5)</button>
+                    <button @click="seccionActual = 'espacios'">Espacios (H6)</button>
+                    <button @click="seccionActual = 'etapas'">Etapas (H8)</button>
+                    <button @click="seccionActual = 'turnos'">Turnos (H9)</button>
+                    <button @click="seccionActual = 'departamentos'">Departamentos (H10)</button>
+                    <button @click="seccionActual = 'roles'">Roles (H11)</button>
                 </div>
-                <p class="admin-note">Tienes acceso total al sistema.</p>
+                <p class="admin-note">Como Administrador, tienes permisos para gestionar todos los módulos
+                </p>
             </section>
         </div>
 
-        <div v-else-if="seccionActual === 'profesores'">
-            <Profesores />
+        <div v-else class="content-view">
+            <component :is="{
+                profesores: Profesores,
+                alumnos: Alumnos,
+                cursos: Cursos,
+                espacios: Espacios,
+                etapas: Etapas,
+                turnos: Turnos,
+                departamentos: Departamento,
+                roles: Roles
+            }[seccionActual]" />
         </div>
-        <div v-else-if="seccionActual === 'alumnos'">
-            <Alumnos />
-        </div>
-        <div v-else-if="seccionActual === 'cursos'">
-            <Cursos />
-        </div>
-        <div v-else-if="seccionActual === 'espacios'">
-            <Espacios />
-        </div>
-        <div v-else-if="seccionActual === 'etapas'">
-            <Etapas />
-        </div>
-        <div v-else-if="seccionActual === 'turnos'">
-            <Turnos />
-        </div>
-        <div v-else-if="seccionActual === 'departamentos'">
-            <Departamento />
-        </div>
-        <div v-else-if="seccionActual === 'roles'">
-            <Roles />
-        </div>
-
     </div>
 </template>
 
 <style scoped>
 .panel-container {
-    background: #eee;
-    padding: 20px;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 600px;
-    color: #333;
+    background: #f8fafc;
+    padding: 30px;
+    border-radius: 12px;
+    color: #1e293b;
 }
 
 header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 20px;
+    margin-bottom: 25px;
 }
 
-.header-buttons {
-    display: flex;
-    gap: 10px;
+.badge-rol {
+    background: #6366f1;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
 }
 
 .acciones-grid {
@@ -134,78 +125,47 @@ header {
 }
 
 section {
-    border-top: 1px solid #ccc;
-    padding-top: 15px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #f1f5f9;
 }
 
-h4 {
-    font-size: 0.85rem;
-    color: #555;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-button {
-    padding: 10px 16px;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 4px;
-    border: none;
-    transition: opacity 0.2s;
-}
-
-button:hover {
-    opacity: 0.9;
-}
-
-.btn-primary {
-    background-color: #3498db;
-    color: white;
-}
-
-.btn-accent {
-    background-color: #f39c12;
-    color: white;
-}
-
-.btn-success {
-    background-color: #27ae60;
-    color: white;
-}
-
-.btn-danger {
-    background-color: #e74c3c;
-    color: white;
-}
-
-.logout-btn {
-    background-color: #666;
-    color: white;
+.admin-zone {
+    border: 2px dashed #6366f1;
+    background: #f5f3ff;
 }
 
 .admin-buttons-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
-.admin-buttons-container button:not(.btn-danger) {
-    background-color: #333;
+.admin-buttons-container button {
+    background: #1e293b;
+    color: white;
+    border-radius: 6px;
+}
+
+.btn-primary {
+    background: #3b82f6;
     color: white;
 }
 
-.admin-note {
-    font-size: 0.75rem;
-    color: #7f8c8d;
-    font-style: italic;
-    margin-top: 10px;
+.btn-accent {
+    background: #f59e0b;
+    color: white;
 }
 
-section:last-of-type {
-    margin-top: 10px;
-    padding-top: 20px;
-    border-top: 2px dashed #ccc;
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.logout-btn {
+    background: #94a3b8;
+    color: white;
 }
 </style>

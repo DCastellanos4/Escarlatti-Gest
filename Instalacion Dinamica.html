@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Admin Console - DC4</title>
+    </head>
+    <body>
+        <h2>Generador de Datos API (POR SI ESTA VACIA EL DIA DE EXPOSICION)</h2>
+        <p>
+            Utiliza los botones de "Insertar Todos" para cargar las estructuras
+            completas de una vez.
+        </p>
+
+        <div class="grid">
+            <div class="card">
+                <h4>1. Estructura de Roles</h4>
+                <button class="btn-all" onclick="insertarLoteRoles()">
+                    Insertar Todos los Roles
+                </button>
+                <button onclick="insertar('roles', { id: 'ADMIN', nombre: 'Administrador', nivel_privilegio: '10' })">
+                    Admin (10)
+                </button>
+                <button onclick="insertar('roles', { id: 'TIC', nombre: 'Responsable TIC', nivel_privilegio: '8' })">
+                    TIC (8)
+                </button>
+            </div>
+
+            <div class="card">
+                <h4>2. Estados de Usuario</h4>
+                <button class="btn-all" onclick="insertarLoteEstados()">
+                    Insertar Todos los Estados
+                </button>
+                <button onclick="insertar('estados_usuario', { id: 'ACT', nombre: 'Activo', permite_acceso: 'true' })">
+                    Estado: Activo
+                </button>
+            </div>
+
+            <div class="card">
+                <h4>3. Base del Centro</h4>
+                <button onclick="insertar('departamentos', { id: 'INF', nombre: 'Informática' })">Insertar INF</button>
+                <button onclick="insertar('etapas', { id: 'DAW', nombre: 'Desarrollo App Web', descripcion: 'Grado Superior' })">Insertar DAW</button>
+                <button onclick="insertar('espacios', { id: 'AULA01', nombre: 'Aula 1', capacidad_max: '25' })">Insertar Aula 1</button>
+            </div>
+
+            <div class="card">
+                <h4>4. Usuarios por Rol</h4>
+                <button class="btn-all" onclick="insertarLoteUsuarios()">
+                    Insertar Usuarios (TIC, PROF, ALUM)
+                </button>
+                <button onclick="insertar('usuarios', { login: 'admin.david', password_hash: '1234', rol_id: 'ADMIN', ref_identidad_fk: '12345678X', estado_id: 'ACT' })">
+                    Admin Principal
+                </button>
+            </div>
+        </div>
+
+        <script>
+            const API_BASE = "http://3.92.78.223:3000";
+            const MI_Z = "DC4";
+
+            async function insertarLoteRoles() {
+                //ME CREO UN ARRAY CON LOS ROLES A INSERTAR
+                const roles = [
+                    { id: "ADMIN", nombre: "Administrador", nivel_privilegio: "10" },
+                    { id: "TIC", nombre: "Responsable TIC", nivel_privilegio: "8" },
+                    { id: "PROF", nombre: "Profesor", nivel_privilegio: "5" },
+                    { id: "ALUM", nombre: "Alumno", nivel_privilegio: "1" },
+                ];
+                //POR CADA VUELTA INTENTO INSERTAR LOS ROLES, SI FALLA UNO SIGUE INSERTANDO(VENTAJA ASINCRONÍA )
+
+                // Bucle asíncrono que recorre la lista de roles uno por uno
+                for (const r of roles) {
+                    // await detiene el bucle hasta que la inserción actual finalice.
+                    await insertar("roles", r);
+                }
+            }
+
+            async function insertarLoteEstados() {
+                //REPETIMOS LO MISMO CON LOS ESTADOS
+                const estados = [
+                    { id: "ACT", nombre: "Activo", permite_acceso: "true", descripcion: "Acceso total" },
+                    { id: "BAJ", nombre: "Baja", permite_acceso: "false", descripcion: "No pertenece al centro" },
+                    { id: "BLOQ", nombre: "Bloqueado", permite_acceso: "false", descripcion: "Acceso restringido" },
+                    { id: "GRAD", nombre: "Graduado", permite_acceso: "false", descripcion: "Fin de ciclo" },
+                    { id: "TEMP", nombre: "Baja Temporal", permite_acceso: "false", descripcion: "Enfermedad larga" },
+                ];
+                for (const e of estados) await insertar("estados_usuario", e);
+            }
+
+            async function insertarLoteUsuarios() {
+                // CREAMOS UN USUARIO PARA CADA ROL DE LA JERARQUÍA
+                const usuarios = [
+                    { login: "ana.tic", password_hash: "1234", rol_id: "TIC", ref_identidad_fk: "87654321B", estado_id: "ACT" },
+                    { login: "carlos.profe", password_hash: "1234", rol_id: "PROF", ref_identidad_fk: "11223344C", estado_id: "ACT" },
+                    { login: "laura.alum", password_hash: "1234", rol_id: "ALUM", ref_identidad_fk: "11223344D", estado_id: "ACT" }
+                ];
+                for (const u of usuarios) await insertar("usuarios", u);
+            }
+
+            async function insertar(tabla, datos) {
+                const insercion = {
+                    // OPERADOR DE PROPAGACION
+                    // Extrae todas las propiedades del objeto que le estoy pasando como argumento
+                    ...datos,
+                    zfecha: new Date().toISOString(),
+                    zusuario: MI_Z,
+                };
+
+                try {
+                    // Concateno las URL para hacer la peticion
+                    const url = `${API_BASE}/${tabla}?zusuario=${MI_Z}`;
+                    // VERIFICACION POR CONSOLA DE LA INSERCION
+                    console.log(`Enviando a ${tabla}:`, insercion);
+
+                    const res = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(insercion),
+                    });
+
+                    const resultado = await res.json();
+
+                    if (res.ok) {
+                        console.log(
+                            `OK: ${tabla} (${datos.id || datos.login || datos.dni_nie || datos.nia}) insertado correctamente.`,
+                        );
+                    } else {
+                        // OPERADOR LOGICO O PARA POR SI EL ERROR NO ES RECONOCIDO
+                        console.error(
+                            `ERROR en ${tabla}: ${resultado.error || "Fallo desconocido"}`,
+                        );
+                    }
+                } catch (err) {
+                    // SI PASA POR AQUI PROBABLEMENTE SEA UN ERROR DE LA API
+                    console.error(`Error de red: ${err.message}`);
+                }
+            }
+        </script>
+    </body>
+</html>

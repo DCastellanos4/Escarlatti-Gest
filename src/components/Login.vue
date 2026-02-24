@@ -1,50 +1,64 @@
+<!-- BLOQUE DE LOGICA -->
 <script setup>
+//IMPORTAMOS EL REF PARA PODER DEFINIRLO Y USARLO
+//REF: NOS PERMITE CREAR VARIABLES REACTIVAS PARA PODER ACTUALIZAR EL DOM
 import { ref } from 'vue'
-
+//DEFINE UN EVENTO PERSONALIZADO
+//SI EL LOGIN ES CORRECTO EL COMPONENTE ENVIA A APP.vue LOS DATOS DEL USUARIO LOGEADO
 const emit = defineEmits(['login-exitoso'])
 
 
-const userField = ref('')
-const passField = ref('')
-const hasError = ref(false)
-const errorMessage = ref('')
-const isLoading = ref(false)
+const userField = ref('') // GUARDA LO REGISTRADO POR EL INPUT DE USER
+const passField = ref('') // GUARDA LO REGISTRADO POR EL INPUT DE PASS
+const hasError = ref(false) //CONTROLA EL CUADRO ROJO DE CUANDO NO SE PUEDE LOGEAR
+const errorMessage = ref('') //DEFINE EL MENSAJE DE ERROR EN EL LOGIN
+const isLoading = ref(false) //SI ESTO ESTA TRUE, NO SE MUESTRA EL BOTON DE ACCEDER
 
 const realizarLogin = async () => {
     hasError.value = false;
     isLoading.value = true;
 
     try {
-        const url = `http://100.27.173.196:3000/auth/login?zusuario=DC4`;
+        //MANDAMOS EL ENDPOINT DE LA API DONDE TIENE QUE HACER EL LOGIN
+        //ESTE ENDPOINT NOS DEVUELVE UNOS DATOS CUANDO EL LOGIN ES EXITOSO
+        const url = `http://3.92.78.223:3000/auth/login?zusuario=DC4`;
 
+        //LLAMADA ASINCRONA A LA API PARA PODER HACER EL LOGIN
+        //CON LAS VALIDACIONES DE SEGURIDAD, SIEMPRE QUE HACEMOS UN POST TENEMOS QUE MANDAR zusuario Y zfecha
+        //SI HACEMOS UN GET SOLO TENEMOS QUE MANDAR zusuario
         const respuesta = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                login: userField.value,   
-                password: passField.value, 
-                zusuario: "DC4"            
+                login: userField.value,
+                password: passField.value,
+                zusuario: "DC4"
             })
         });
 
         const data = await respuesta.json();
-
+        //SI LA RESPUESTA ES OK NO DEJA ENTRAR AL PANEL DE OPCIONES
         if (respuesta.ok) {
-            console.log("✅ Acceso concedido a:", data.nombre);
+            console.log("Acceso concedido a:", data.nombre);
+            //ESTABLECE EL EVENTO LOGIN EXITOSO Y LE ENVIA NUESTROS DATOS DE LOGIN A APP.vue
             emit('login-exitoso', data);
         } else {
+            //SI FALLA EL ESTADO DEL ERROR CAMBIA Y NOS MUESTRA EL ERROR
             hasError.value = true;
             errorMessage.value = data.motivo || data.error || "Fallo en la autenticación";
         }
     } catch (err) {
+        //SI LA PETICION FALLA POR ALGO ENTRAMOS EN ESTE BLOQUE 
+        //NOS MUESTRA EL FALLO DE ERROR DE LA API
         console.error("Fallo de red:", err);
         errorMessage.value = "Error de conexión con el servidor.";
     } finally {
+        //SIEMPRE LLEGAMOS AQUI PARA PODER PONER OTRA VEZ EL BOTON EN OPERATIVO, POR SI HACEN LOGOUT
         isLoading.value = false;
     }
 }
 </script>
-
+<!-- BLOQUE DE INTERFAZ -->
 <template>
     <div class="login-container">
         <div class="login-box">
@@ -53,10 +67,11 @@ const realizarLogin = async () => {
                 <h2>Escarlatti<span>Gest</span></h2>
                 <p>Sprint 3 - Control de Acceso</p>
             </header>
-
+            <!-- SUBMIT.PREVENT PARA CAPTURAR EL ENVIO DEL FORMULARIO PERO EVITAR UN REFRESCO DE LA PAGINA -->
             <form @submit.prevent="realizarLogin" class="login-form">
                 <div class="input-group">
                     <label>Usuario</label>
+                    <!-- USO V-MODEL PARA VINCULAR LAS VARIABLES REACTIVAS -->
                     <input v-model="userField" type="text" placeholder="admin.david" required>
                 </div>
 
@@ -64,27 +79,33 @@ const realizarLogin = async () => {
                     <label>Contraseña</label>
                     <input v-model="passField" type="password" placeholder="••••••••" required>
                 </div>
-
+                <!-- SE USA EL DISABLED PARA BLOQUEAR EL BOTON DE MIENTRAS ESPERAMOS LA RESPUESTA DE LA PROMESA -->
                 <button type="submit" class="btn-login" :disabled="isLoading">
+                    <!-- SE COMPRUEBA EL BOOLEAN IS LOADING Y DEPENDIENDO DE SI ESTA EN TRUE O FALSE MUESTRA UN BOTON O OTRO -->
                     {{ isLoading ? 'Comprobando...' : 'Entrar al Sistema' }}
                 </button>
             </form>
-
+            <!-- ENVOLTURA DE VUE QUE APLICA AUTOMATICAMENTE CLASES DE ANIMACION CUANDO APARECE EL MSG DE ERROR -->
             <Transition name="slide-up">
                 <div v-if="hasError" class="error-message">
-                    <span class="icon">⚠️</span> {{ errorMessage }}
+                    <!-- MOSTRAMOS EL MENSAJE DE ERROR DEFINIDO PREVIAMENTE -->
+                    {{ errorMessage }}
                 </div>
             </Transition>
         </div>
     </div>
 </template>
+<!-- BLOQUE DE ESTILOS -->
 <style scoped>
 /* Paleta de colores Sprint 3 - Escarlatti Indigo */
 .login-container {
-    --primary: #6366f1;       /* Indigo */
+    --primary: #6366f1;
+    /* Indigo */
     --primary-hover: #4f46e5;
-    --accent: #10b981;        /* Emerald (Éxito) */
-    --dark-bg: #0f172a;       /* Slate 900 */
+    --accent: #10b981;
+    /* Emerald (Éxito) */
+    --dark-bg: #0f172a;
+    /* Slate 900 */
     --text-main: #1e293b;
     --text-muted: #64748b;
     --error-bg: #fef2f2;
@@ -93,7 +114,7 @@ const realizarLogin = async () => {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 90vh; /* Para que quede bien centrado verticalmente */
+    min-height: 90vh;
 }
 
 .login-box {
@@ -171,7 +192,8 @@ input {
     color: var(--dark-bg);
     font-size: 1rem;
     transition: all 0.2s ease;
-    box-sizing: border-box; /* Fundamental para que el padding no rompa el ancho */
+    box-sizing: border-box;
+    /* Fundamental para que el padding no rompa el ancho */
 }
 
 input:focus {
@@ -224,7 +246,8 @@ input:focus {
 }
 
 /* Animaciones */
-.slide-up-enter-active, .slide-up-leave-active {
+.slide-up-enter-active,
+.slide-up-leave-active {
     transition: all 0.3s ease-out;
 }
 

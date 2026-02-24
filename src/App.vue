@@ -1,30 +1,27 @@
+<!-- BLOQUE DE LOGICA -->
 <script setup>
-/**
- * ARCHIVO: App.vue
- * DESCRIPCIÓN: Punto de entrada principal. Aquí controlamos el "Estado Global" 
- * de la sesión para saber si mostramos la puerta (Login) o el panel de control.
- */
 import { ref } from 'vue'
+//IMPORTAMOS LOS 2 COMPONENTES ESENCIALES QUE QUEREMOS MOSTRAR
 import Login from './components/Login.vue'
 import AdminPanel from './components/AdminPanel.vue'
 
-// "usuarioActivo" es la variable que me guarda la session si es null, no me enseña nada.
+//ESTA VARIABLE GUARDA QUE USUARIO ESTA LOGEADO, INICIALMENTE ES NULL PORQUE NO HAY NADIE LOGEADO
 const usuarioActivo = ref(null)
 
 /**
  * Recibe el testigo del componente Login.
  * datos del servidor me da el usuario que ha hecho login correctamente
  */
+//RECIBE LO ENVIADO DEL COMPONENTE LOGIN
+//datosDelServidor ME DA EL USUARIO QUE SE HA LOGEADO
 const iniciarSesion = (datosDelServidor) => {
   console.log("Sesión iniciada para:", datosDelServidor.login)
   usuarioActivo.value = datosDelServidor
 }
 
-/**
- * Borra el rastro del usuario. Al ser reactivo (ref), 
- * Vue detecta el cambio y nos manda directos al Login por el v-if.
- */
+//PONEMOS EL USUARIO A NULL Y POR TANTO NOS SACA OTRA VEZ AL MENU
 const cerrarSesion = () => {
+  //USAMOS CONFIRMACION POR SI HA CLICKADO SIN QUERER
   if (confirm("¿Seguro que quieres salir?")) {
     usuarioActivo.value = null
   }
@@ -33,17 +30,12 @@ const cerrarSesion = () => {
 
 <template>
   <main class="main-wrapper">
-    
-    <Login 
-      v-if="!usuarioActivo" 
-      @login-exitoso="iniciarSesion" 
-    />
-
-    <AdminPanel 
-      v-else 
-      :usuario="usuarioActivo" 
-      @logout="cerrarSesion"
-    />
+    <!-- MUESTRA EL COMPONENTE DEL LOGIN SI NO HAY UN USUARIOACTIVO -->
+    <!-- RECOGEMOS EL EVENTO QUE HEMOS CREADO CON EMIT PARA EJECUTAR LA FUNCION DE INICIO DE SESION -->
+    <Login v-if="!usuarioActivo" @login-exitoso="iniciarSesion" />
+    <!-- MUESTRA EL COMPONENTE DEL PANEL SI HAY UN USUARIO LOGEADO -->
+    <!-- REGOGEMOS EL EVENTO Y VICEVERSA -->
+    <AdminPanel v-else :usuario="usuarioActivo" @logout="cerrarSesion" />
 
   </main>
 </template>
@@ -51,7 +43,7 @@ const cerrarSesion = () => {
 <style>
 :root {
   --primary: #2c3e50;
-  --bg-dark: #1e1e1e; 
+  --bg-dark: #1e1e1e;
   --text-light: #f5f5f5;
 }
 
@@ -72,7 +64,7 @@ body {
   box-sizing: border-box;
 }
 
-.main-wrapper > * {
+.main-wrapper>* {
   transition: all 0.3s ease;
 }
 </style>

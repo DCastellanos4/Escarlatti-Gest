@@ -7,10 +7,10 @@
 import { ref, onMounted } from 'vue'
 
 const listaTurnos = ref([])
-const listaCursos = ref([]) 
+const listaCursos = ref([])
 const turnoEnEdicion = ref(null)
 
-const modeloTurno = ref({ id: '', nombre: '', horario_referencia: '' })
+const modeloTurno = ref({ id: '', nombre: '', horario_referencia: '', zfecha: new Date().toISOString(), zusuario: "DC4" })
 
 /**
  * Carga masiva de datos desde la API.
@@ -19,8 +19,8 @@ const modeloTurno = ref({ id: '', nombre: '', horario_referencia: '' })
 const sincronizarDatos = async () => {
     try {
         const [resTur, resCur] = await Promise.all([
-            fetch('http://100.52.46.68:3000/turnos'),
-            fetch('http://100.52.46.68:3000/cursos')
+            fetch('http://44.207.19.239:3000/turnos?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/cursos?zusuario=DC4')
         ]);
 
         const datosTurnos = await resTur.json();
@@ -38,19 +38,27 @@ const sincronizarDatos = async () => {
  */
 const procesarFormulario = async () => {
     const esEdicion = !!turnoEnEdicion.value;
-    const datosFinales = esEdicion ? turnoEnEdicion.value : modeloTurno.value;
     const metodo = esEdicion ? 'PUT' : 'POST';
     const url = esEdicion
-        ? `http://100.52.46.68:3000/turnos/${turnoEnEdicion.value.id}`
-        : 'http://100.52.46.68:3000/turnos';
+        ? `http://44.207.19.239:3000/turnos/${turnoEnEdicion.value.id}?zusuario=DC4`
+        : 'http://44.207.19.239:3000/turnos?zusuario=DC4';
 
-    //ERROR BBDD:
-    // Si es un alta, calculamos el ID manual para evitar errores de nulidad en la DB
-    if (!esEdicion) {
-        const maxId = listaTurnos.value.length > 0
-            ? Math.max(...listaTurnos.value.map(t => Number(t.id)))
-            : 0;
-        datosFinales.id = (maxId + 1).toString();
+    const origen = esEdicion ? turnoEnEdicion.value : modeloTurno.value;
+
+    // CONSTRUCCIÓN DEL PAYLOAD (El cuerpo del mensaje)
+    const datosFinales = {
+        nombre: origen.nombre,
+        horario_referencia: origen.horario_referencia,
+        zusuario: "DC4"
+    };
+
+    if (esEdicion) {
+        datosFinales.id = origen.id;
+    } else {
+        // Generamos el ID manual solo si tu API no lo hace sola
+        const idsNumericos = listaTurnos.value.map(t => Number(t.id));
+        const maxIdExistente = idsNumericos.length > 0 ? Math.max(...idsNumericos) : 0;
+        datosFinales.id = (maxIdExistente + 1).toString();
     }
 
     try {
@@ -64,6 +72,10 @@ const procesarFormulario = async () => {
             alert(esEdicion ? "Turno actualizado" : "Nuevo turno registrado");
             cancelarAccion();
             await sincronizarDatos();
+        } else {
+            const errorData = await respuesta.json();
+            console.error("Error detallado:", errorData);
+            alert("Error del servidor: " + (errorData.error || "Desconocido"));
         }
     } catch (error) {
         alert("Error de comunicación con la API.");
@@ -83,7 +95,7 @@ const eliminarTurno = async (id) => {
     }
 
     if (confirm("¿Estás seguro de eliminar este turno de la base de datos?")) {
-        await fetch(`http://100.52.46.68:3000/turnos/${id}`, { method: 'DELETE' });
+        await fetch(`http://44.207.19.239:3000/turnos/${id}?zusuario=DC4`, { method: 'DELETE' });
         await sincronizarDatos();
     }
 }
@@ -92,7 +104,7 @@ const eliminarTurno = async (id) => {
 const iniciarEdicion = (turno) => { turnoEnEdicion.value = { ...turno }; }
 const cancelarAccion = () => {
     turnoEnEdicion.value = null;
-    modeloTurno.value = { id: '', nombre: '', horario_referencia: '' };
+    modeloTurno.value = { id: '', nombre: '', horario_referencia: '', zfecha: new Date().toISOString(), zusuario: "DC4" };
 }
 
 onMounted(sincronizarDatos);

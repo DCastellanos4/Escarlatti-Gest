@@ -1,58 +1,101 @@
 <script setup>
+/**
+ * COMPONENTE: GestionRoles.vue
+ * Descripción: Mantenimiento de roles de acceso utilizando códigos de texto (ADMIN, PROF, etc.)
+ */
 import { ref, onMounted } from 'vue'
 
 const roles = ref([])
+// Modelo inicializado con campos vacíos y zusuario
 const nuevoRol = ref({
-    id: '',
+    id: '', // Se ingresará manualmente como código (ej: 'GESTOR')
     nombre: '',
     nivel_privilegio: 1,
-    descripcion: ''
+    descripcion: '',
+    zusuario: 'DC4'
 })
 const rolEditando = ref(null)
 
+/**
+ * Carga de roles desde la API
+ */
 const cargarRoles = async () => {
     try {
-        const respuesta = await fetch('http://100.52.46.68:3000/roles')
+        const respuesta = await fetch('http://44.207.19.239:3000/roles?zusuario=DC4')
         const data = await respuesta.json()
-        // Ordenamos por ID para mantener la estabilidad visual
-        roles.value = data.sort((a, b) => Number(a.id) - Number(b.id))
+        // Ordenamos alfabéticamente por el código ID
+        roles.value = data.sort((a, b) => a.id.localeCompare(b.id))
     } catch (error) {
         console.error("Error cargando roles:", error)
     }
 }
 
+/**
+ * Registro de un nuevo Rol (POST)
+ */
 const guardarRol = async () => {
-    const maxId = roles.value.length > 0
-        ? Math.max(...roles.value.map(r => Number(r.id)))
-        : 0;
-    nuevoRol.value.id = (maxId + 1).toString();
+    // Verificamos si el código ya existe para evitar errores de clave primaria
+    const existe = roles.value.find(r => r.id.toUpperCase() === nuevoRol.value.id.toUpperCase());
+    if (existe) {
+        alert("El código de Rol (ID) ya existe. Prueba con otro.");
+        return;
+    }
 
-    const respuesta = await fetch('http://100.52.46.68:3000/roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevoRol.value)
-    });
+    // Payload limpio enviando el ID en mayúsculas
+    const datosFinales = {
+        id: nuevoRol.value.id.toUpperCase(),
+        nombre: nuevoRol.value.nombre,
+        nivel_privilegio: Number(nuevoRol.value.nivel_privilegio),
+        descripcion: nuevoRol.value.descripcion,
+        zusuario: 'DC4'
+    };
 
-    if (respuesta.ok) {
-        nuevoRol.value = { id: '', nombre: '', nivel_privilegio: 1, descripcion: '' };
-        await cargarRoles();
+    try {
+        const respuesta = await fetch('http://44.207.19.239:3000/roles?zusuario=DC4', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosFinales)
+        });
+
+        if (respuesta.ok) {
+            alert("Rol creado correctamente.");
+            nuevoRol.value = { id: '', nombre: '', nivel_privilegio: 1, descripcion: '', zusuario: 'DC4' };
+            await cargarRoles();
+        } else {
+            const err = await respuesta.json();
+            alert("Error: " + (err.error || "No se pudo crear"));
+        }
+    } catch (e) {
+        alert("Error de conexión con la API.");
     }
 }
 
+/**
+ * Actualización de Rol existente (PUT)
+ */
 const actualizarRol = async () => {
-    const id = rolEditando.value.id;
-    await fetch(`http://100.52.46.68:3000/roles/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(rolEditando.value)
-    });
-    rolEditando.value = null;
-    await cargarRoles();
+    const datosFinales = {
+        ...rolEditando.value,
+        nivel_privilegio: Number(rolEditando.value.nivel_privilegio),
+        zusuario: 'DC4'
+    };
+
+    try {
+        await fetch(`http://44.207.19.239:3000/roles/${rolEditando.value.id}?zusuario=DC4`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosFinales)
+        });
+        rolEditando.value = null;
+        await cargarRoles();
+    } catch (e) {
+        alert("Error al actualizar.");
+    }
 }
 
 const borrarRol = async (id) => {
-    if (confirm("¿Eliminar este rol? Asegúrate de que no haya usuarios asignados.")) {
-        await fetch(`http://100.52.46.68:3000/roles/${id}`, { method: 'DELETE' });
+    if (confirm(`¿Eliminar el rol ${id}?`)) {
+        await fetch(`http://44.207.19.239:3000/roles/${id}?zusuario=DC4`, { method: 'DELETE' });
         await cargarRoles();
     }
 }
@@ -65,25 +108,30 @@ onMounted(cargarRoles);
 
 <template>
     <div class="gestion-container">
-        <h3>Gestión de Roles (H11)</h3>
+        <header class="seccion-header">
+            <h3>Gestión de Roles y Privilegios (H11)</h3>
+        </header>
 
         <form @submit.prevent="rolEditando ? actualizarRol() : guardarRol()" class="form-grid">
-            <input v-if="!rolEditando" v-model="nuevoRol.nombre" placeholder="Nombre del Rol (ej. Editor)" required>
-            <input v-else v-model="rolEditando.nombre" placeholder="Nombre" required>
+            <input v-if="!rolEditando" v-model="nuevoRol.id" placeholder="Código ID (ej. GESTOR)" required>
+            <input v-else v-model="rolEditando.id" disabled>
+
+            <input v-if="!rolEditando" v-model="nuevoRol.nombre" placeholder="Nombre Visible" required>
+            <input v-else v-model="rolEditando.nombre" placeholder="Nombre Visible" required>
 
             <div class="input-group">
-                <label>Nivel Privilegio (1-3)</label>
-                <input v-if="!rolEditando" v-model="nuevoRol.nivel_privilegio" type="number" min="1" max="3" required>
-                <input v-else v-model="rolEditando.nivel_privilegio" type="number" min="1" max="3" required>
+                <label>Nivel de Privilegio (1-10)</label>
+                <input v-if="!rolEditando" v-model="nuevoRol.nivel_privilegio" type="number" min="1" max="10" required>
+                <input v-else v-model="rolEditando.nivel_privilegio" type="number" min="1" max="10" required>
             </div>
 
-            <input v-if="!rolEditando" v-model="nuevoRol.descripcion" placeholder="Descripción del nivel de acceso"
-                class="full-width" required>
-            <input v-else v-model="rolEditando.descripcion" placeholder="Descripción" class="full-width" required>
+            <input v-if="!rolEditando" v-model="nuevoRol.descripcion" placeholder="Descripción de permisos"
+                class="full-width">
+            <input v-else v-model="rolEditando.descripcion" placeholder="Descripción" class="full-width">
 
             <div class="form-actions">
                 <button type="submit" class="btn-success">
-                    {{ rolEditando ? 'Guardar Cambios' : 'Crear Rol' }}
+                    {{ rolEditando ? 'Guardar Cambios' : 'Registrar Rol' }}
                 </button>
                 <button v-if="rolEditando" type="button" @click="cancelarEdicion" class="btn-sec">Cancelar</button>
             </div>
@@ -93,8 +141,8 @@ onMounted(cargarRoles);
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Rol</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
                         <th>Nivel</th>
                         <th>Descripción</th>
                         <th>Acciones</th>
@@ -102,10 +150,10 @@ onMounted(cargarRoles);
                 </thead>
                 <tbody>
                     <tr v-for="rol in roles" :key="rol.id">
-                        <td>{{ rol.id }}</td>
-                        <td><strong>{{ rol.nombre }}</strong></td>
-                        <td>Nivel {{ rol.nivel_privilegio }}</td>
-                        <td>{{ rol.descripcion }}</td>
+                        <td><strong>{{ rol.id }}</strong></td>
+                        <td>{{ rol.nombre }}</td>
+                        <td><span class="badge">Nivel {{ rol.nivel_privilegio }}</span></td>
+                        <td>{{ rol.descripcion || 'Sin descripción' }}</td>
                         <td class="td-actions">
                             <button @click="iniciarEdicion(rol)" class="btn-accent">Editar</button>
                             <button @click="borrarRol(rol.id)" class="btn-danger">Borrar</button>
@@ -118,6 +166,13 @@ onMounted(cargarRoles);
 </template>
 
 <style scoped>
+/* Manteniendo tu estilo corporativo DAW */
+.seccion-header {
+    border-left: 5px solid #27ae60;
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -126,6 +181,7 @@ onMounted(cargarRoles);
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .full-width {
@@ -135,7 +191,6 @@ onMounted(cargarRoles);
 .input-group {
     display: flex;
     flex-direction: column;
-    text-align: left;
 }
 
 .input-group label {
@@ -144,46 +199,45 @@ onMounted(cargarRoles);
     margin-bottom: 2px;
 }
 
-.form-actions {
-    grid-column: span 2;
-    display: flex;
-    gap: 10px;
-}
-
 input {
-    padding: 10px;
-    border: 1px solid #ccc;
+    padding: 12px;
     border-radius: 4px;
     color: #fff;
     background: #2c3e50;
+    border: 1px solid #ccc;
+}
+
+input:disabled {
+    background: #34495e;
+    color: #bdc3c7;
 }
 
 .btn-success {
     background: #27ae60;
     color: white;
+    padding: 14px;
     border: none;
-    padding: 12px;
     border-radius: 4px;
     font-weight: bold;
-    flex: 2;
     cursor: pointer;
+    flex: 2;
 }
 
 .btn-sec {
     background: #95a5a6;
     color: white;
+    padding: 14px;
     border: none;
-    padding: 12px;
     border-radius: 4px;
-    flex: 1;
     cursor: pointer;
+    flex: 1;
 }
 
 .btn-accent {
     background: #f39c12;
     color: white;
     border: none;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
 }
@@ -192,7 +246,7 @@ input {
     background: #e74c3c;
     color: white;
     border: none;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
 }
@@ -200,6 +254,15 @@ input {
 .td-actions {
     display: flex;
     gap: 8px;
+}
+
+.badge {
+    background: #ecf0f1;
+    color: #2c3e50;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
 }
 
 .table-container {
@@ -219,5 +282,11 @@ td {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #eee;
+}
+
+th {
+    color: #7f8c8d;
+    font-size: 0.8rem;
+    text-transform: uppercase;
 }
 </style>

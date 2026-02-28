@@ -22,7 +22,9 @@ const modeloProfesor = ref({
     correo_institucional: '',
     departamento_id: '',
     rol_id: 2, //rol por defecto de profesor
-    password_hash: ''
+    password_hash: '',
+    zfecha: new Date().toISOString(),
+    zusuario: "DC4"
 })
 
 /**
@@ -31,9 +33,9 @@ const modeloProfesor = ref({
 const sincronizarBaseDeDatos = async () => {
     try {
         const [resProf, resDep, resRoles] = await Promise.all([
-            fetch('http://100.52.46.68:3000/profesores'),
-            fetch('http://100.52.46.68:3000/departamentos'),
-            fetch('http://100.52.46.68:3000/roles')
+            fetch('http://44.207.19.239:3000/profesores?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/departamentos?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/roles?zusuario=DC4')
         ]);
 
         listaProfesores.value = await resProf.json();
@@ -85,8 +87,8 @@ const guardarProfesor = async () => {
         // Si hay un DNI en 'editandoDNI', usamos PUT, si no POST
         const metodo = editandoDNI.value ? 'PUT' : 'POST';
         const url = editandoDNI.value
-            ? `http://100.52.46.68:3000/profesores/${editandoDNI.value}`
-            : 'http://100.52.46.68:3000/profesores';
+            ? `http://44.207.19.239:3000/profesores/${editandoDNI.value}?zusuario=DC4`
+            : 'http://44.207.19.239:3000/profesores';
 
         const respuesta = await fetch(url, {
             method: metodo,
@@ -112,7 +114,7 @@ const eliminarDocente = async (dni) => {
 
     if (confirmacion) {
         try {
-            const respuesta = await fetch(`http://100.52.46.68:3000/profesores/${dni}`, {
+            const respuesta = await fetch(`http://44.207.19.239:3000/profesores/${dni}?zusuario=DC4`, {
                 method: 'DELETE'
             });
 

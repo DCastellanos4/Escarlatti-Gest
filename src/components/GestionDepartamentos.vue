@@ -1,28 +1,33 @@
 <script setup>
+/**
+ * COMPONENTE: GestionDepartamentos.vue
+ * Descripción: Mantenimiento de departamentos usando códigos ID (INF, MAT, etc.)
+ */
 import { ref, onMounted } from 'vue'
 
 const departamentos = ref([])
 const profesores = ref([])
 
-// Campos ajustados a tu captura: id, nombre, ubicacion, correo_contacto
+// Modelo ajustado a tu captura: id (texto), nombre, ubicacion, correo_contacto
 const nuevoDep = ref({
     id: '',
     nombre: '',
     ubicacion: '',
-    correo_contacto: ''
+    correo_contacto: '',
+    zusuario: 'DC4'
 })
 const depEditando = ref(null)
 
 const cargarDatos = async () => {
     try {
         const [resDep, resProf] = await Promise.all([
-            fetch('http://100.52.46.68:3000/departamentos'),
-            fetch('http://100.52.46.68:3000/profesores')
+            fetch('http://44.207.19.239:3000/departamentos?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/profesores?zusuario=DC4')
         ]);
 
         const dataDep = await resDep.json();
-        // Ordenamos por ID para que la tabla sea estable
-        departamentos.value = dataDep.sort((a, b) => Number(a.id) - Number(b.id));
+        // Ordenamos por el código ID alfabéticamente
+        departamentos.value = dataDep.sort((a, b) => a.id.localeCompare(b.id));
         profesores.value = await resProf.json();
     } catch (error) {
         console.error("Error cargando departamentos:", error);
@@ -30,44 +35,71 @@ const cargarDatos = async () => {
 }
 
 const guardarDepartamento = async () => {
-    const maxId = departamentos.value.length > 0
-        ? Math.max(...departamentos.value.map(d => Number(d.id)))
-        : 0;
-    nuevoDep.value.id = (maxId + 1).toString();
+    // Verificamos si el código ya existe
+    const existe = departamentos.value.find(d => d.id.toUpperCase() === nuevoDep.value.id.toUpperCase());
+    if (existe) {
+        alert("El código de Departamento ya existe.");
+        return;
+    }
 
-    const respuesta = await fetch('http://100.52.46.68:3000/departamentos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevoDep.value)
-    });
+    const datosFinales = {
+        id: nuevoDep.value.id.toUpperCase(),
+        nombre: nuevoDep.value.nombre,
+        ubicacion: nuevoDep.value.ubicacion,
+        correo_contacto: nuevoDep.value.correo_contacto,
+        zusuario: 'DC4'
+    };
 
-    if (respuesta.ok) {
-        nuevoDep.value = { id: '', nombre: '', ubicacion: '', correo_contacto: '' };
-        await cargarDatos();
+    try {
+        const respuesta = await fetch('http://44.207.19.239:3000/departamentos?zusuario=DC4', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosFinales)
+        });
+
+        if (respuesta.ok) {
+            alert("Departamento registrado con éxito.");
+            nuevoDep.value = { id: '', nombre: '', ubicacion: '', correo_contacto: '', zusuario: 'DC4' };
+            await cargarDatos();
+        }
+    } catch (e) {
+        alert("Error al conectar con la API.");
     }
 }
 
 const actualizarDepartamento = async () => {
-    const id = depEditando.value.id;
-    await fetch(`http://100.52.46.68:3000/departamentos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(depEditando.value)
-    });
-    depEditando.value = null;
-    await cargarDatos();
+    const datosFinales = {
+        ...depEditando.value,
+        zusuario: 'DC4'
+    };
+
+    try {
+        const res = await fetch(`http://44.207.19.239:3000/departamentos/${depEditando.value.id}?zusuario=DC4`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosFinales)
+        });
+
+        if (res.ok) {
+            depEditando.value = null;
+            await cargarDatos();
+        }
+    } catch (e) {
+        alert("Error en la actualización.");
+    }
 }
 
 const borrarDepartamento = async (id) => {
-    const tieneProfesores = profesores.value.some(p => Number(p.departamento_id) === Number(id));
+    // Comprobamos si hay profesores vinculados al código de departamento
+    const tieneProfesores = profesores.value.some(p => p.departamento_id === id);
 
     if (tieneProfesores) {
-        alert("Acción bloqueada: Hay profesores asignados a este departamento.");
+        alert("Acción bloqueada: No puedes borrar un departamento que tiene profesores asignados.");
         return;
     }
 
-    if (confirm("¿Eliminar este departamento?")) {
-        await fetch(`http://100.52.46.68:3000/departamentos/${id}`, { method: 'DELETE' });
+    if (confirm(`¿Eliminar el departamento ${id}?`)) {
+        await fetch(`http://44.207.19.239:3000/departamentos/${id}?zusuario=DC4`, { method: 'DELETE' });
         await cargarDatos();
     }
 }
@@ -80,23 +112,27 @@ onMounted(cargarDatos);
 
 <template>
     <div class="gestion-container">
-        <h3>Gestión de Departamentos (H10)</h3>
+        <header class="seccion-header">
+            <h3>Gestión de Departamentos (H10)</h3>
+        </header>
 
         <form @submit.prevent="depEditando ? actualizarDepartamento() : guardarDepartamento()" class="form-grid">
+            <input v-if="!depEditando" v-model="nuevoDep.id" placeholder="Código ID (ej. INF)" required>
+            <input v-else v-model="depEditando.id" disabled>
+
             <input v-if="!depEditando" v-model="nuevoDep.nombre" placeholder="Nombre (ej. Informática)" required>
             <input v-else v-model="depEditando.nombre" placeholder="Nombre" required>
 
-            <input v-if="!depEditando" v-model="nuevoDep.ubicacion" placeholder="Ubicación (ej. Edificio A, planta 2)"
-                required>
+            <input v-if="!depEditando" v-model="nuevoDep.ubicacion" placeholder="Ubicación (ej. Ala Norte)" required>
             <input v-else v-model="depEditando.ubicacion" placeholder="Ubicación" required>
 
-            <input v-if="!depEditando" v-model="nuevoDep.correo_contacto" placeholder="Correo (ej. info@escarlatti.es)"
+            <input v-if="!depEditando" v-model="nuevoDep.correo_contacto" placeholder="Correo de contacto"
                 class="full-width" required>
             <input v-else v-model="depEditando.correo_contacto" placeholder="Correo" class="full-width" required>
 
             <div class="form-actions">
                 <button type="submit" class="btn-success">
-                    {{ depEditando ? 'Actualizar' : 'Registrar Departamento' }}
+                    {{ depEditando ? 'Guardar Cambios' : 'Registrar Departamento' }}
                 </button>
                 <button v-if="depEditando" type="button" @click="cancelarEdicion" class="btn-sec">Cancelar</button>
             </div>
@@ -106,7 +142,7 @@ onMounted(cargarDatos);
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Código</th>
                         <th>Nombre</th>
                         <th>Ubicación</th>
                         <th>Contacto</th>
@@ -115,10 +151,10 @@ onMounted(cargarDatos);
                 </thead>
                 <tbody>
                     <tr v-for="d in departamentos" :key="d.id">
-                        <td>{{ d.id }}</td>
+                        <td><strong>{{ d.id }}</strong></td>
                         <td>{{ d.nombre }}</td>
-                        <td>{{ d.ubicacion }}</td>
-                        <td>{{ d.correo_contacto }}</td>
+                        <td>{{ d.ubicacion || 'No especificada' }}</td>
+                        <td>{{ d.correo_contacto || 'Sin correo' }}</td>
                         <td class="td-actions">
                             <button @click="iniciarEdicion(d)" class="btn-accent">Editar</button>
                             <button @click="borrarDepartamento(d.id)" class="btn-danger">Borrar</button>
@@ -131,6 +167,12 @@ onMounted(cargarDatos);
 </template>
 
 <style scoped>
+.seccion-header {
+    border-left: 5px solid #27ae60;
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -139,52 +181,52 @@ onMounted(cargarDatos);
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .full-width {
     grid-column: span 2;
 }
 
-.form-actions {
-    grid-column: span 2;
-    display: flex;
-    gap: 10px;
-}
-
 input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 12px;
+    border-radius: 6px;
     color: #fff;
     background: #2c3e50;
+    border: 1px solid #ccc;
+}
+
+input:disabled {
+    background: #34495e;
+    color: #bdc3c7;
 }
 
 .btn-success {
     background: #27ae60;
     color: white;
-    border: none;
     padding: 12px;
+    border: none;
     border-radius: 4px;
     font-weight: bold;
-    flex: 2;
     cursor: pointer;
+    flex: 2;
 }
 
 .btn-sec {
     background: #95a5a6;
     color: white;
-    border: none;
     padding: 12px;
+    border: none;
     border-radius: 4px;
-    flex: 1;
     cursor: pointer;
+    flex: 1;
 }
 
 .btn-accent {
     background: #f39c12;
     color: white;
     border: none;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
 }
@@ -193,7 +235,7 @@ input {
     background: #e74c3c;
     color: white;
     border: none;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
 }
@@ -220,5 +262,11 @@ td {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #eee;
+}
+
+th {
+    color: #7f8c8d;
+    font-size: 0.8rem;
+    text-transform: uppercase;
 }
 </style>

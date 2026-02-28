@@ -21,7 +21,7 @@ const realizarLogin = async () => {
     try {
         //MANDAMOS EL ENDPOINT DE LA API DONDE TIENE QUE HACER EL LOGIN
         //ESTE ENDPOINT NOS DEVUELVE UNOS DATOS CUANDO EL LOGIN ES EXITOSO
-        const url = `http://3.92.78.223:3000/auth/login?zusuario=DC4`;
+        const url = `http://44.207.19.239:3000/auth/login?zusuario=DC4`;
 
         //LLAMADA ASINCRONA A LA API PARA PODER HACER EL LOGIN
         //CON LAS VALIDACIONES DE SEGURIDAD, SIEMPRE QUE HACEMOS UN POST TENEMOS QUE MANDAR zusuario Y zfecha

@@ -12,6 +12,11 @@ import Etapas from './GestionEtapas.vue'
 import Turnos from './GestionTurnos.vue'
 import Departamento from './GestionDepartamentos.vue'
 import Roles from './GestionRoles.vue'
+import Users from './GestionUsuarios.vue'
+import Reservas from './GestionReservas.vue'
+import Horarios from './GestionHorarios.vue'
+import Incidencias from './GestionIncidencias.vue'
+import Resolver from './resolverIncidencias.vue'
 
 // Recibimos el objeto de autenticación completa
 const props = defineProps(['usuario']);
@@ -49,30 +54,35 @@ const irAMenu = () => seccionActual.value = 'menu';
 
             <section>
                 <h4>Servicios Generales</h4>
-                <button class="btn-primary">Crear Incidencia</button>
+                <button @click="seccionActual = 'incidencias'" class="btn-primary">Crear Incidencia</button>
+
             </section>
 
             <section v-if="['Administrador', 'Profesor'].includes(String(usuario.rol))">
                 <h4>Gestión de Espacios</h4>
-                <button class="btn-accent">Reservar Aula / Espacio</button>
+                <button @click="seccionActual = 'reservas'" class="btn-accent">Reservar espacio</button>
+
             </section>
 
             <section v-if="['Administrador', 'Responsable TIC'].includes(String(usuario.rol))">
                 <h4>Mantenimiento TIC</h4>
-                <button class="btn-success">Resolver Incidencias</button>
+                <button @click="seccionActual = 'resolver'" class="btn-success">Resolver Incidencias</button>
+
             </section>
 
             <section v-if="usuario.rol == 'Administrador'" class="admin-zone">
                 <h4>Mantenimiento de Tablas (Acceso Total)</h4>
                 <div class="admin-buttons-container">
-                    <button @click="seccionActual = 'profesores'">Profesores (H3)</button>
-                    <button @click="seccionActual = 'alumnos'">Alumnos (H4)</button>
-                    <button @click="seccionActual = 'cursos'">Cursos (H5)</button>
-                    <button @click="seccionActual = 'espacios'">Espacios (H6)</button>
-                    <button @click="seccionActual = 'etapas'">Etapas (H8)</button>
-                    <button @click="seccionActual = 'turnos'">Turnos (H9)</button>
-                    <button @click="seccionActual = 'departamentos'">Departamentos (H10)</button>
-                    <button @click="seccionActual = 'roles'">Roles (H11)</button>
+                    <button @click="seccionActual = 'profesores'">Profesores</button>
+                    <button @click="seccionActual = 'alumnos'">Alumnos</button>
+                    <button @click="seccionActual = 'cursos'">Cursos</button>
+                    <button @click="seccionActual = 'espacios'">Espacios</button>
+                    <button @click="seccionActual = 'etapas'">Etapas</button>
+                    <button @click="seccionActual = 'turnos'">Turnos</button>
+                    <button @click="seccionActual = 'departamentos'">Departamentos</button>
+                    <button @click="seccionActual = 'roles'">Roles</button>
+                    <button @click="seccionActual = 'users'">Usuarios</button>
+                    <button @click="seccionActual = 'horarios'">Horarios</button>
                 </div>
                 <p class="admin-note">Como Administrador, tienes permisos para gestionar todos los módulos
                 </p>
@@ -88,8 +98,13 @@ const irAMenu = () => seccionActual.value = 'menu';
                 etapas: Etapas,
                 turnos: Turnos,
                 departamentos: Departamento,
-                roles: Roles
-            }[seccionActual]" />
+                roles: Roles,
+                users: Users,
+                horarios: Horarios,
+                reservas: Reservas,
+                incidencias: Incidencias,
+                resolver: Resolver
+            }[seccionActual]" :usuario="usuario" />
         </div>
     </div>
 </template>

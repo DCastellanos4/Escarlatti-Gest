@@ -27,7 +27,9 @@ const nuevoCurso = ref({
     turno_id: '',
     anio_academico: '',
     tutor_id: '',
-    aula_id: ''
+    aula_id: '',
+    zfecha: new Date().toISOString(),
+    zusuario: "DC4"
 })
 
 /**
@@ -37,12 +39,12 @@ const nuevoCurso = ref({
 const cargarDatos = async () => {
     try {
         const [resCur, resProf, resEt, resTur, resAlu, resEsp] = await Promise.all([
-            fetch('http://100.52.46.68:3000/cursos'),
-            fetch('http://100.52.46.68:3000/profesores'),
-            fetch('http://100.52.46.68:3000/etapas'),
-            fetch('http://100.52.46.68:3000/turnos'),
-            fetch('http://100.52.46.68:3000/alumnos'),
-            fetch('http://100.52.46.68:3000/espacios')
+            fetch('http://44.207.19.239:3000/cursos?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/profesores?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/etapas?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/turnos?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/alumnos?zusuario=DC4'),
+            fetch('http://44.207.19.239:3000/espacios?zusuario=DC4')
         ]);
 
         cursos.value = await resCur.json();
@@ -59,17 +61,16 @@ const cargarDatos = async () => {
 /**
  * Registra un nuevo curso con lógica de validación
  */
+/**
+ * Registra un nuevo curso con lógica de validación corregida
+ */
 const guardarCurso = async () => {
-    //FALLO DE LA BBDD:
-    // 1. CÁLCULO MANUAL DEL ID:
-    // Evitamos conflictos de autoincremento calculando el siguiente ID disponible.
-    const maxId = cursos.value.length > 0
-        ? Math.max(...cursos.value.map(c => Number(c.id)))
-        : 0;
-    nuevoCurso.value.id = (maxId + 1).toString();
+    // 1. CÁLCULO MANUAL DEL ID (Prevenir duplicados)
+    const idsNumericos = cursos.value.map(c => Number(c.id));
+    const maxIdExistente = idsNumericos.length > 0 ? Math.max(...idsNumericos) : 0;
+    const nuevoId = (maxIdExistente + 1).toString();
 
-    //TUTORÍA ÚNICA:
-    // Un profesor no puede ser tutor de dos cursos en el mismo año.
+    // 2. VALIDACIÓN DE TUTORÍA ÚNICA
     const tutorOcupado = cursos.value.find(c =>
         Number(c.tutor_id) === Number(nuevoCurso.value.tutor_id) &&
         c.anio_academico === nuevoCurso.value.anio_academico
@@ -80,21 +81,42 @@ const guardarCurso = async () => {
         return;
     }
 
+    // 3. CONSTRUCCIÓN DEL OBJETO LIMPIO (Payload)
+    // Enviamos exactamente lo que la API espera para evitar Error 400/500
+    const datosFinales = {
+        id: nuevoId,
+        nombre_curso: nuevoCurso.value.nombre_curso,
+        etapa_id: nuevoCurso.value.etapa_id,
+        grupo: nuevoCurso.value.grupo,
+        turno_id: nuevoCurso.value.turno_id,
+        anio_academico: nuevoCurso.value.anio_academico,
+        tutor_id: nuevoCurso.value.tutor_id,
+        aula_id: nuevoCurso.value.aula_id,
+        zusuario: "DC4" // Requisito de tu API en el body
+    };
+
     try {
-        const respuesta = await fetch('http://100.52.46.68:3000/cursos', {
+        const respuesta = await fetch('http://44.207.19.239:3000/cursos?zusuario=DC4', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nuevoCurso.value)
+            body: JSON.stringify(datosFinales)
         });
 
         if (respuesta.ok) {
-            alert(`Curso creado con éxito (ID asignado: ${nuevoCurso.value.id})`);
-            // Reset del formulario
+            alert(`Curso creado con éxito (ID asignado: ${nuevoId})`);
+            
+            // Reset del formulario a estado inicial
             nuevoCurso.value = {
                 id: '', nombre_curso: '', etapa_id: '', grupo: '',
-                turno_id: '', anio_academico: '', tutor_id: '', aula_id: ''
+                turno_id: '', anio_academico: '', tutor_id: '', aula_id: '',
+                zfecha: new Date().toISOString(), zusuario: "DC4"
             };
+            
+            // Recarga obligatoria para actualizar el estado global
             await cargarDatos();
+        } else {
+            const errorData = await respuesta.json();
+            alert("Error de la API: " + (errorData.error || "No se pudo crear el curso"));
         }
     } catch (e) {
         alert("Error de red: No se ha podido contactar con la API.");
@@ -122,7 +144,7 @@ const intentarBorrarCurso = async (id) => {
     }
 
     if (confirm("¿Estás seguro de que quieres eliminar este curso permanentemente?")) {
-        await fetch(`http://100.52.46.68:3000/cursos/${id}`, { method: 'DELETE' });
+        await fetch(`http://44.207.19.239:3000/cursos/${id}?zusuario=DC4`, { method: 'DELETE' });
         await cargarDatos();
     }
 }

@@ -1,0 +1,6 @@
+services:
+  vue-app:
+    build: .
+    container_name: mi-proyecto-vue
+    ports:
+      - "8080:80"

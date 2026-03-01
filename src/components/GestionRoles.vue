@@ -5,25 +5,27 @@
  */
 import { ref, onMounted } from 'vue'
 
-const roles = ref([])
-// Modelo inicializado con campos vacíos y zusuario
+const roles = ref([])//LISTA DE ROLES
+
+//MODELO DE INSEFCION DE ROL
 const nuevoRol = ref({
-    id: '', // Se ingresará manualmente como código (ej: 'GESTOR')
+    id: '',
     nombre: '',
     nivel_privilegio: 1,
     descripcion: '',
     zusuario: 'DC4'
 })
-const rolEditando = ref(null)
+
+const rolEditando = ref(null) //BOOLEANO DE EDICION
 
 /**
- * Carga de roles desde la API
+ * CARGAMOS LOS ROLES DESDE LA API
  */
 const cargarRoles = async () => {
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/roles?zusuario=DC4')
         const data = await respuesta.json()
-        // Ordenamos alfabéticamente por el código ID
+        //ORDENAMOS ALFABETICAMENTE EN BASE A EL ID
         roles.value = data.sort((a, b) => a.id.localeCompare(b.id))
     } catch (error) {
         console.error("Error cargando roles:", error)
@@ -31,17 +33,17 @@ const cargarRoles = async () => {
 }
 
 /**
- * Registro de un nuevo Rol (POST)
+ * REGISTRO DE UN NUEVO ROL
  */
 const guardarRol = async () => {
-    // Verificamos si el código ya existe para evitar errores de clave primaria
+    //VERIFICAMOS SI EL CODIGO YA EXISTE PARA EVITAR ERRORES DE PK
     const existe = roles.value.find(r => r.id.toUpperCase() === nuevoRol.value.id.toUpperCase());
     if (existe) {
         alert("El código de Rol (ID) ya existe. Prueba con otro.");
         return;
     }
 
-    // Payload limpio enviando el ID en mayúsculas
+    //OBJETO A ENVIAR
     const datosFinales = {
         id: nuevoRol.value.id.toUpperCase(),
         nombre: nuevoRol.value.nombre,
@@ -49,7 +51,7 @@ const guardarRol = async () => {
         descripcion: nuevoRol.value.descripcion,
         zusuario: 'DC4'
     };
-
+    //LO ENVIAMOS CON POST
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/roles?zusuario=DC4', {
             method: 'POST',
@@ -58,6 +60,7 @@ const guardarRol = async () => {
         });
 
         if (respuesta.ok) {
+            //ALERT DE EXITO Y VACIADO DE FORMULARIO
             alert("Rol creado correctamente.");
             nuevoRol.value = { id: '', nombre: '', nivel_privilegio: 1, descripcion: '', zusuario: 'DC4' };
             await cargarRoles();
@@ -71,15 +74,16 @@ const guardarRol = async () => {
 }
 
 /**
- * Actualización de Rol existente (PUT)
+ * ACTUALIZACION DE ROL
  */
 const actualizarRol = async () => {
+    //RECUPERAMOS LOS DATOS DEL ROL QUE SE QUIERE EDITAR
     const datosFinales = {
         ...rolEditando.value,
         nivel_privilegio: Number(rolEditando.value.nivel_privilegio),
         zusuario: 'DC4'
     };
-
+    //USAMOS PUT PAR ENVIAR LOS CAMBIOS
     try {
         await fetch(`http://44.207.19.239:3000/roles/${rolEditando.value.id}?zusuario=DC4`, {
             method: 'PUT',
@@ -92,14 +96,14 @@ const actualizarRol = async () => {
         alert("Error al actualizar.");
     }
 }
-
+//BORRADO CON CONFIRMACION BASICO
 const borrarRol = async (id) => {
     if (confirm(`¿Eliminar el rol ${id}?`)) {
         await fetch(`http://44.207.19.239:3000/roles/${id}?zusuario=DC4`, { method: 'DELETE' });
         await cargarRoles();
     }
 }
-
+//CONTROL DE INTERFAZ PARA LA EDICION DE ROLES
 const iniciarEdicion = (rol) => { rolEditando.value = { ...rol }; }
 const cancelarEdicion = () => { rolEditando.value = null; }
 

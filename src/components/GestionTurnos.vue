@@ -6,15 +6,14 @@
  */
 import { ref, onMounted } from 'vue'
 
-const listaTurnos = ref([])
-const listaCursos = ref([])
-const turnoEnEdicion = ref(null)
-
+const listaTurnos = ref([]) //ARRAY TURNOS 
+const listaCursos = ref([]) //ARRAY CURSOS
+const turnoEnEdicion = ref(null) //BOOLEANO DE EDICION
+//MODELO DE TURNO CON
 const modeloTurno = ref({ id: '', nombre: '', horario_referencia: '', zfecha: new Date().toISOString(), zusuario: "DC4" })
 
 /**
- * Carga masiva de datos desde la API.
- * Usamos Promise.all para que las peticiones no se bloqueen entre sí.
+ * CARGA MASIVA DESDE LA API
  */
 const sincronizarDatos = async () => {
     try {
@@ -24,7 +23,7 @@ const sincronizarDatos = async () => {
         ]);
 
         const datosTurnos = await resTur.json();
-        // Ordenamiento por ID para que la tabla sea estable visualmente
+        //ORDENAMOS LA LISTA POR ID PARA MEJORAR LA VISUAL
         listaTurnos.value = datosTurnos.sort((a, b) => Number(a.id) - Number(b.id));
 
         listaCursos.value = await resCur.json();
@@ -34,9 +33,10 @@ const sincronizarDatos = async () => {
 }
 
 /**
- * Procesa el formulario. Decide si registrar uno nuevo (POST) o actualizar (PUT).
+ * PROCESAMIENTO DEL FORMULARIO EN BASE A UNA EDICION O INSERCION
  */
 const procesarFormulario = async () => {
+    //SE ELIGE EL METODO Y SE PROCESA 
     const esEdicion = !!turnoEnEdicion.value;
     const metodo = esEdicion ? 'PUT' : 'POST';
     const url = esEdicion
@@ -45,7 +45,7 @@ const procesarFormulario = async () => {
 
     const origen = esEdicion ? turnoEnEdicion.value : modeloTurno.value;
 
-    // CONSTRUCCIÓN DEL PAYLOAD (El cuerpo del mensaje)
+    // CONSTRUCCIÓN DEL OBJETO
     const datosFinales = {
         nombre: origen.nombre,
         horario_referencia: origen.horario_referencia,
@@ -55,13 +55,14 @@ const procesarFormulario = async () => {
     if (esEdicion) {
         datosFinales.id = origen.id;
     } else {
-        // Generamos el ID manual solo si tu API no lo hace sola
+        //GENERAMOS EL ID MANUAL EN CASEO DE QUE NO SEA UN EDICION
         const idsNumericos = listaTurnos.value.map(t => Number(t.id));
         const maxIdExistente = idsNumericos.length > 0 ? Math.max(...idsNumericos) : 0;
         datosFinales.id = (maxIdExistente + 1).toString();
     }
 
     try {
+        //MANDAMOS LA PETICION
         const respuesta = await fetch(url, {
             method: metodo,
             headers: { 'Content-Type': 'application/json' },
@@ -83,10 +84,10 @@ const procesarFormulario = async () => {
 }
 
 /**
- * Lógica de borrado con protección -> No se borra si hay cursos vinculados.
+ * ELIMINACION CON PROTECCION DE INTEGRIDAD REFERENCIAL
  */
 const eliminarTurno = async (id) => {
-    // Comprobamos si algún curso depende de este turno_id
+    // SI UN TURNO TIENE VINCULADO ALGUN CURSO NO SE BORRA
     const tieneViculos = listaCursos.value.some(c => Number(c.turno_id) === Number(id));
 
     if (tieneViculos) {
@@ -100,7 +101,7 @@ const eliminarTurno = async (id) => {
     }
 }
 
-// --- GESTIÓN DE UI ---
+// --- CONTROL DE INTERFAZ EDICION ---
 const iniciarEdicion = (turno) => { turnoEnEdicion.value = { ...turno }; }
 const cancelarAccion = () => {
     turnoEnEdicion.value = null;

@@ -5,8 +5,8 @@
  */
 import { ref, onMounted } from 'vue'
 
-const listaEspacios = ref([])
-
+const listaEspacios = ref([])//CARGAMOS LAS AULAS
+//MODELO DE AULAS
 const modeloEspacio = ref({
     id: '',
     nombre: '',
@@ -18,7 +18,7 @@ const modeloEspacio = ref({
 })
 
 /**
- * Carga de datos con limpieza de zusuario
+ * CARGA DE DATOS 
  */
 const cargarDatos = async () => {
     try {
@@ -26,7 +26,7 @@ const cargarDatos = async () => {
         const respuesta = await fetch('http://44.207.19.239:3000/espacios?zusuario=DC4')
         const datos = await respuesta.json()
 
-        // ORDENAMIENTO: Mantenemos la tabla estable por ID
+        // ORDENAMOS POR ID LAS AULAS
         listaEspacios.value = datos.sort((a, b) => Number(a.id) - Number(b.id))
     } catch (error) {
         console.error("Fallo al conectar con la API de espacios:", error);
@@ -34,12 +34,11 @@ const cargarDatos = async () => {
 }
 
 /**
- * Alternar Operatividad con Payload Limpio
+ * FUNCION TOGGLE PARA CAMBIAR ENTRE OPERTAVIAS Y NO OPERATIVAS
  */
 const conmutarOperatividad = async (espacio) => {
     const nuevoEstado = espacio.estado_operativo === 'true' ? 'false' : 'true';
 
-    // PAYLOAD LIMPIO: Solo enviamos lo que la tabla requiere + zusuario
     const espacioActualizado = {
         id: espacio.id,
         nombre: espacio.nombre,
@@ -49,6 +48,7 @@ const conmutarOperatividad = async (espacio) => {
         estado_operativo: nuevoEstado,
         zusuario: 'DC4'
     };
+
     try {
         const respuesta = await fetch(`http://44.207.19.239:3000/espacios/${espacio.id}?zusuario=DC4`, {
             method: 'PUT',
@@ -65,7 +65,7 @@ const conmutarOperatividad = async (espacio) => {
 }
 
 /**
- * Guardar Nuevo Espacio con ID dinámico
+ * GUARDAR UN NUEVO ESPACIO CON ID AUTOINCREMENTABLE CASERO
  */
 const guardarNuevoEspacio = async () => {
     //FUNCIONES PARA CALCULAR EL ID 
@@ -76,16 +76,16 @@ const guardarNuevoEspacio = async () => {
 
     const maxId = idsNumericos.length > 0 ? Math.max(...idsNumericos) : 0;
 
-    // 3. Generamos el nuevo ID con el prefijo deseado
+    // GENERAMOS EL ID CON EL PREFIJO AULA PARA EVITAR ERRORES DE ID
     const nuevoId = "AULA" + (maxId + 1).toString();
 
-    // 4. Preparamos el objeto para enviar
+    // OBJETO A ENVIAR
     const datosFinales = {
         ...modeloEspacio.value,
         id: nuevoId,
         zusuario: 'DC4'
     };
-
+    //LO ENVIAMOS CON POST
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/espacios?zusuario=DC4', {
             method: 'POST',
@@ -96,7 +96,7 @@ const guardarNuevoEspacio = async () => {
         if (respuesta.ok) {
             alert(`Aula "${datosFinales.nombre}" registrada con ID #${nuevoId}.`);
 
-            // Reset completo del formulario
+            // RESET COMPLETO DEL FORMULARIO
             modeloEspacio.value = {
                 id: '', nombre: '', ubicacion_planta: '',
                 capacidad_max: 0, equipamiento: '',
@@ -111,7 +111,7 @@ const guardarNuevoEspacio = async () => {
         alert("Error de red al registrar espacio.");
     }
 }
-
+//FUNCION DE BORRADO DE AULAS, NOS SALE UNA CONFIRMACION ANTES DE BORRAR(MEJORA)
 const borrarRegistro = async (id) => {
     if (confirm("¿Seguro que quieres eliminar este espacio?")) {
         try {

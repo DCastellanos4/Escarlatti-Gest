@@ -1,10 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
-const franjas = ref([])
-const turnos = ref([])
-const franjaEnEdicion = ref(null)
-
+const franjas = ref([]) //ARRAY DE HORARIOS
+const turnos = ref([]) // ARRAY DE TURNOS
+const franjaEnEdicion = ref(null) //BOOLEANO DE EDICION
+//MODELO PARA EL HORARIO
 const modeloFranja = ref({
     id: '',
     nombre: '',
@@ -13,7 +13,7 @@ const modeloFranja = ref({
     turno_id: '',
     zusuario: 'DC4'
 })
-
+//FUNCION PARA CARGAR DATOS
 const cargarDatos = async () => {
     try {
         const [resFra, resTur] = await Promise.all([
@@ -22,8 +22,8 @@ const cargarDatos = async () => {
         ]);
 
         const datosFra = await resFra.json();
-        
-        // CORRECCIÓN TYPEERROR: Aseguramos que id sea string antes de hacer replace
+
+        //ORDENAMOS LA LISTA EN ORDEN DEL ID
         franjas.value = datosFra.sort((a, b) => {
             const numA = Number(a.id.toString().replace(/\D/g, '')) || 0;
             const numB = Number(b.id.toString().replace(/\D/g, '')) || 0;
@@ -35,28 +35,28 @@ const cargarDatos = async () => {
         console.error("Error al cargar franjas horarias:", error);
     }
 }
-
+//ELECCION DE METODO, PUT/POST
 const procesarFormulario = async () => {
     const esEdicion = !!franjaEnEdicion.value;
     const origen = esEdicion ? franjaEnEdicion.value : modeloFranja.value;
 
-    // 1. GENERACIÓN DE ID ROBUSTA
+    // GENERACIÓN DE ID MANUAL
     let finalId = origen.id;
     if (!esEdicion) {
         const idsExistentes = franjas.value.map(f => Number(f.id) || 0);
         let maxId = idsExistentes.length > 0 ? Math.max(...idsExistentes) : 0;
         finalId = maxId + 1;
-        
-        // Bucle de seguridad para evitar "duplicate key"
+
+        // BUCLE EXTRA ADICIONAL PARA EVITAR ERRORES DE DOBLE ID
         while (idsExistentes.includes(finalId)) {
             finalId++;
         }
     }
 
-    // 2. Formateo de horas HH:mm:ss
+    // FORMATEAO DE HORA EN H:M:S
     const formatearHora = (h) => (h && h.length === 5) ? `${h}:00` : h;
 
-    // 3. PAYLOAD LIMPIO
+    // OBJETO A ENVIAR
     const datosFinales = {
         id: Number(finalId),
         nombre: origen.nombre,
@@ -65,12 +65,12 @@ const procesarFormulario = async () => {
         turno_id: origen.turno_id,
         zusuario: 'DC4'
     };
-
+    //ELECCION DEL METODO A ENVIAR
     const metodo = esEdicion ? 'PUT' : 'POST';
     const url = esEdicion
         ? `http://44.207.19.239:3000/horarios/${finalId}?zusuario=DC4`
         : 'http://44.207.19.239:3000/horarios?zusuario=DC4';
-
+    //ENVIAMOS EL METODO
     try {
         const respuesta = await fetch(url, {
             method: metodo,
@@ -83,6 +83,7 @@ const procesarFormulario = async () => {
             cancelarAccion();
             await cargarDatos();
         } else {
+            //ERRORSERVER PARA DEBUG
             const errorServer = await respuesta.json();
             alert("Error de la API: " + (errorServer.error || "Revisa los datos"));
         }
@@ -90,14 +91,14 @@ const procesarFormulario = async () => {
         alert("Error de red.");
     }
 }
-
+//ELIMINAR HORARIO CON CONFIRMACION PARA EVITAR MISSCLICK
 const eliminarFranja = async (id) => {
     if (confirm(`¿Eliminar la franja ${id}?`)) {
         await fetch(`http://44.207.19.239:3000/horarios/${id}?zusuario=DC4`, { method: 'DELETE' });
         await cargarDatos();
     }
 }
-
+//CONTROL DE UI DE EDICION
 const iniciarEdicion = (f) => { franjaEnEdicion.value = { ...f }; }
 const cancelarAccion = () => {
     franjaEnEdicion.value = null;

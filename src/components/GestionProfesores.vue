@@ -6,29 +6,27 @@
  */
 import { ref, onMounted } from 'vue'
 
-// --- ESTADO REACTIVO ---
-const listaProfesores = ref([])
-const listaDepartamentos = ref([])
-const listaRoles = ref([])
+const listaProfesores = ref([]) //ARRAY DE PROFESORES
+const listaDepartamentos = ref([]) //ARRAY DE DEPARTAMENTOS
+const listaRoles = ref([]) //ARRAY DE ROLES
 
-// Ref para saber si estamos editando (guardamos el DNI original)
-const editandoDNI = ref(null);
+const editandoDNI = ref(null); //BOOLEANO DE EDICION
 
-// Modelo de profesor incial(semi-clase)
+// MODELO DE PROFESOR INICIAL
 const modeloProfesor = ref({
     dni_nie: '',
     nombre: '',
     apellidos: '',
     correo_institucional: '',
     departamento_id: '',
-    rol_id: 2, //rol por defecto de profesor
+    rol_id: "PROF", //ROL POR DEFECTO DE PROFESOR
     password_hash: '',
     zfecha: new Date().toISOString(),
     zusuario: "DC4"
 })
 
 /**
- * Función de carga masiva. 
+ * CARGAMOS TODO CON PROMISE ALL PARA MEJORAR LOS TIEMPOS DE CARGA
  */
 const sincronizarBaseDeDatos = async () => {
     try {
@@ -47,16 +45,16 @@ const sincronizarBaseDeDatos = async () => {
 }
 
 /**
- * Prepara el formulario para editar un profesor existente
+ * CONTROL DE INTERFAZ PARA LA EDICION DE UN PROFESOR
  */
 const iniciarEdicion = (profe) => {
     editandoDNI.value = profe.dni_nie;
-    // Hacemos una copia para no modificar la tabla en tiempo real hasta guardar
+    // COPIA PARA NO MODIFICAR LA TABLA REAL ANTES DE GUARDAR
     modeloProfesor.value = { ...profe };
 }
 
 /**
- * Limpia el formulario y sale del modo edición
+ * LIMPIA EL FORMULARIO Y SALE DEL MODO EDICION
  */
 const cancelarEdicion = () => {
     editandoDNI.value = null;
@@ -68,10 +66,10 @@ const cancelarEdicion = () => {
 }
 
 /**
- * Registrar o Actualizar profesor (H3)
+ * REGISTRAMOS O EDITAMOS UN PROFESOR
  */
 const guardarProfesor = async () => {
-    // Si no estamos editando, comprobamos duplicados (DNI o Email)
+    // SINO ESTAMOS EDITANDO COMPROBAMOS EL DNI Y EL CORREO
     if (!editandoDNI.value) {
         const existe = listaProfesores.value.find(p =>
             p.dni_nie === modeloProfesor.value.dni_nie ||
@@ -84,12 +82,12 @@ const guardarProfesor = async () => {
     }
 
     try {
-        // Si hay un DNI en 'editandoDNI', usamos PUT, si no POST
+        // ELEGIMOS EL METODO A USAR
         const metodo = editandoDNI.value ? 'PUT' : 'POST';
         const url = editandoDNI.value
             ? `http://44.207.19.239:3000/profesores/${editandoDNI.value}?zusuario=DC4`
             : 'http://44.207.19.239:3000/profesores';
-
+        //HACEMOS LA PETICION CON ESE METODO
         const respuesta = await fetch(url, {
             method: metodo,
             headers: { 'Content-Type': 'application/json' },
@@ -107,7 +105,7 @@ const guardarProfesor = async () => {
 }
 
 /**
- * Borrado directo de profesorado.
+ * BORRADO CON CONFIRMACION 
  */
 const eliminarDocente = async (dni) => {
     const confirmacion = confirm(`¿Estás seguro de que quieres dar de baja al profesor con DNI: ${dni}?`);
@@ -141,6 +139,7 @@ onMounted(sincronizarBaseDeDatos);
         </header>
 
         <form @submit.prevent="guardarProfesor" class="form-grid">
+            <!-- SI ESTAMOS EDITANDO EL DNI NO LO MODIFICAMOS PORQUE ES PK -->
             <input v-model="modeloProfesor.dni_nie" placeholder="DNI / NIE" :disabled="editandoDNI" required>
             <input v-model="modeloProfesor.nombre" placeholder="Nombre" required>
             <input v-model="modeloProfesor.apellidos" placeholder="Apellidos" required>

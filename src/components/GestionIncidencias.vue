@@ -8,11 +8,11 @@ import { ref, onMounted } from 'vue'
 // Recibimos la sesión desde el AdminPanel
 const props = defineProps(['usuario']);
 
-const listaEspacios = ref([]);
-const listaIncidencias = ref([]);
-const isLoading = ref(false);
+const listaEspacios = ref([]); //GUARDA LAS AULAS DESDE EL ENDPOINT DE ESPACIOS
+const listaIncidencias = ref([]); //RECUPERA LAS INCIDENCIAS PARA PODER MOSTRARLAS
+const isLoading = ref(false); //BOOLEANO DE CARGA PARA PODER DESHABILITAR EL BOTON
 
-const modeloIncidencia = ref({
+const modeloIncidencia = ref({ //ESTRUCTURA BASICA DE UNA INCIDENCIA
     espacio_id: '',
     descripcion_problema: '',
     zusuario: 'DC4'
@@ -38,28 +38,31 @@ const cargarDatos = async () => {
  * Registro de nueva incidencia
  */
 const registrarIncidencia = async () => {
+    //PONEMOS EL BOOLEANO A TRUE PARA QUE MIENTRAS SE HAGAN LAS PETICIONES DESHABILITAR EL BOTON
     isLoading.value = true;
 
-    // 1. Generación de ID numérico automático
-    const idsExistentes = listaIncidencias.value.map(i => Number(i.id) || 0);
-    // const nuevoId = (idsExistentes.length > 0 ? Math.max(...idsExistentes) : 0) + 1;
-    const nuevoId= 950;
+    // GENERACION DE ID MANUAL, ERROR EN LA BASE DE DATOS
+    // Buscamos el ID más alto y le sumamos 1. 
+    // Si la lista está vacía, empezamos en 1.
+    const nuevoId = Math.max(0, ...listaIncidencias.value.map(i => Number(i.id))) + 1;
 
-    // 2. Construcción del Payload según la estructura de la API
+
+    // CREAMOS LA ESTRUCTURA DE LA INCIDENCIA
     const datosFinales = {
         id: nuevoId,                                     //
         espacio_id: modeloIncidencia.value.espacio_id,   //
-        usuario_login: props.usuario.usuario,           // Usuario de la sesión
+        usuario_login: props.usuario.usuario,           // USUARIO LOGEADO
         descripcion_problema: modeloIncidencia.value.descripcion_problema, //
-        estado_incidencia_id: 'ABI',                // Estado inicial por defecto
-        responsable_resolucion_id: null,                // Vacío al crear
-        comentarios_resolucion: null,                   // Vacío al crear
-        fecha_resolucion: null,                         // Vacío al crear
+        estado_incidencia_id: 'ABI',                // SE CREA ABIERTA POR DEFECTO
+        responsable_resolucion_id: null,                // VACIO AL CREAR
+        comentarios_resolucion: null,                   // VACIO AL CREAR
+        fecha_resolucion: null,                         // VACIO AL CREAR
         zfecha: new Date().toISOString(),               //
         zusuario: 'DC4'                                 //
     };
 
     try {
+        //ENVIAMOS LA PETICION MEDIANTE POST
         const respuesta = await fetch('http://44.207.19.239:3000/incidencias?zusuario=DC4', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -67,9 +70,11 @@ const registrarIncidencia = async () => {
         });
 
         if (respuesta.ok) {
+            //LIMPIAMOS EL FORMULARIO Y SE MUESTRA UN ALERT DE EXITO
             alert(`Incidencia #${nuevoId} enviada al equipo TIC.`);
             modeloIncidencia.value.descripcion_problema = '';
             modeloIncidencia.value.espacio_id = '';
+            //REFRESCAMOS LA LISTA PARA PODER CALCULAR EL ID AUTOINCREMENTABLE
             await cargarDatos();
         } else {
             const errorData = await respuesta.json();
@@ -78,10 +83,10 @@ const registrarIncidencia = async () => {
     } catch (e) {
         alert("Fallo de conexión con el servidor.");
     } finally {
+        //AUNQUE DE ERROR DEVOLVEMOS EL BOOLEANO PARA QUE MUESTRE EL BOTON OTRA VEZ
         isLoading.value = false;
     }
 }
-
 onMounted(cargarDatos);
 </script>
 
@@ -89,6 +94,7 @@ onMounted(cargarDatos);
     <div class="incidencias-container">
         <header class="seccion-header">
             <h3>Reportar Incidencia TIC</h3>
+            <!-- MUESTRA EL USUARIO LOGEADO -->
             <p>Usuario: <strong>{{ props.usuario.nombre }}</strong></p>
         </header>
 
@@ -97,6 +103,7 @@ onMounted(cargarDatos);
                 <label>Aula o Espacio afectado</label>
                 <select v-model="modeloIncidencia.espacio_id" required>
                     <option value="" disabled>-- Seleccionar ubicación --</option>
+                    <!-- V-FOR PARA MOSTRAR TODAS LAS AULAS DEL ARRAY LISTAESPACIOS -->
                     <option v-for="e in listaEspacios" :key="e.id" :value="e.id">
                         {{ e.nombre }}
                     </option>
@@ -107,6 +114,7 @@ onMounted(cargarDatos);
                 <label>Descripción detallada del problema</label>
                 <textarea v-model="modeloIncidencia.descripcion_problema"
                     placeholder="Ej: El proyector no enciende o falta un cable HDMI..." rows="4" required></textarea>
+                    <!-- OBLIGATORIO LA DESCRIPCION PARA SABER QUE HAY QUE RESOLVER -->
             </div>
 
             <button type="submit" class="btn-enviar" :disabled="isLoading">

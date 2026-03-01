@@ -1,20 +1,22 @@
 <script setup>
 /**
  * COMPONENTE: GestionReservas.vue
- * Rework: Solo el autor anula su reserva y formato de fecha DD/MM/YYYY en tabla.
+ * GESTION INTEGRAL DE RESERVAS
  */
 import { ref, onMounted } from 'vue'
+//PROPS PARA TRAER EL FLUJO DE ADMIN PANEL A ESTE COMPONENTE
 const props = defineProps(['usuario']);
 
 const usuarioLogeado = ref({
-    login: props.usuario.usuario, // Usamos la clave 'usuario' que viene de tu API
-    rol_id: props.usuario.rol      // Usamos la clave 'rol' que viene de tu API
+    login: props.usuario.usuario, // Usamos la clave 'usuario' que viene de la API
+    rol_id: props.usuario.rol      // Usamos la clave 'rol' que viene de la API
 });
-const listaReservas = ref([])
-const listaEspacios = ref([])
-const listaHorarios = ref([])
-const listaUsuarios = ref([])
+const listaReservas = ref([]) //CARGAMOS LAS RESERVAS
+const listaEspacios = ref([]) //CARGAMOS LAS AULAS
+const listaHorarios = ref([]) //CARGAMOS LAS HORA DISPONIBLES
+const listaUsuarios = ref([]) //CARGAMOS LOS USUARIOS
 
+//MODELO DE UNA RESERVA
 const modeloReserva = ref({
     id: '',
     espacio_id: '',
@@ -24,7 +26,7 @@ const modeloReserva = ref({
     motivo_reserva: '',
     zusuario: 'DC4'
 })
-
+//CARGA DE DATOSS MASICA CON ALL
 const cargarDatos = async () => {
     try {
         const [resRes, resEsp, resHor, resUsr] = await Promise.all([
@@ -44,29 +46,30 @@ const cargarDatos = async () => {
 }
 
 /**
- * Función para mostrar la fecha en formato DD/MM/YYYY en la tabla
+ * FUNCION PARA MOSTRAR LA FECHA FORMATEADA
  */
 const formatearFechaVisual = (fecha) => {
     if (!fecha) return 'Sin fecha';
 
-    // Limpiamos la fecha por si viene con la hora (ej: 2026-02-24T00:00:00)
+    //SE LIMPIA LA FECHA Y LE QUITAMOS LA HORA
     const fechaLimpia = fecha.split('T')[0];
 
-    // Detectamos el separador (puede ser - o /)
+    //SE DETECTA EL SEPARADOR DE LA FECHA
     const partes = fechaLimpia.includes('-') ? fechaLimpia.split('-') : fechaLimpia.split('/');
 
-    // Si la fecha viene como YYYY/MM/DD
+    //LA FORMATEAMOS
     if (partes[0].length === 4) {
         return `${partes[2]}/${partes[1]}/${partes[0]}`;
     }
-    // Si ya viene como DD/MM/YYYY la devolvemos tal cual
+    // SI YA VIENE FORMATEADA LA DEVOLVEMOS 
     return fechaLimpia;
 };
 
 /**
- * Registro de nueva reserva
+ * INSERCION DE RESERVA
  */
 const guardarReserva = async () => {
+    //MIRAMOS SI YA ESTA OCUPADA ESE MISMO AULA EN ESE MISMO HORARIO ESE MISMO DIA
     const existeOcupada = listaReservas.value.find(r =>
         r.espacio_id === modeloReserva.value.espacio_id &&
         r.horario_id == modeloReserva.value.horario_id && // Usamos == por si uno es string y otro number
@@ -77,17 +80,18 @@ const guardarReserva = async () => {
         alert("ERROR: Este aula ya está reservada para el día y hora seleccionados.");
         return;
     }
+    //VERIFICACION EXTRA DE PERMISOS, POR SI LOS USUARIOS MAS EXPERTOS SE CUELAN EN EL PANEL
     const rolesPermitidos = ['Administrador', 'Profesor'];
     if (!rolesPermitidos.includes(usuarioLogeado.value.rol_id)) {
         alert("Tu cuenta no tiene permisos para realizar reservas.");
         return;
     }
 
-    // Cálculo dinámico de ID para evitar duplicados
+    // CALCULO DE ID PARA EVITAR DUPLICIDAD
     const idsExistentes = listaReservas.value.map(r => Number(r.id) || 0);
     let finalId = (idsExistentes.length > 0 ? Math.max(...idsExistentes) : 0) + 1;
     while (idsExistentes.includes(finalId)) { finalId++; }
-
+    //OBJETO A INSERTAR
     const datosFinales = {
         id: finalId,
         espacio_id: modeloReserva.value.espacio_id,
@@ -97,7 +101,7 @@ const guardarReserva = async () => {
         motivo_reserva: modeloReserva.value.motivo_reserva,
         zusuario: 'DC4'
     };
-
+    //METODO POST PARA ENVIARLO
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/reservas?zusuario=DC4', {
             method: 'POST',
@@ -106,6 +110,7 @@ const guardarReserva = async () => {
         });
 
         if (respuesta.ok) {
+            //ALERT DE EXITO Y VACIAMOS EL FORMULARIO
             alert(`Reserva #${finalId} creada correctamente.`);
             modeloReserva.value = {
                 id: '', espacio_id: '', horario_id: '',
@@ -124,10 +129,10 @@ const guardarReserva = async () => {
 }
 
 const eliminarReserva = async (reserva) => {
-    // Verificamos: ¿Es Admin? O ¿El login de la reserva coincide con el logeado?
+    //SE VERIFICA SI EL DUEÑO DE LA RESERVA ES EL LOGEADO O SI ES ADMIN
     const esDuenio = reserva.usuario_login === usuarioLogeado.value.login;
     const esAdmin = usuarioLogeado.value.rol_id === 'Administrador';
-
+    //SI SE CUMPLE ALGUNA DE LAS 2 LE OFRECEMOS PODER BORRAR SU RESERVA CON CONFIRMACION
     if (esAdmin || esDuenio) {
         if (confirm(`¿Anular reserva #${reserva.id}?`)) {
             try {
@@ -214,6 +219,7 @@ onMounted(cargarDatos);
                         </td>
                         <td><span class="user-tag">{{ res.usuario_login }}</span></td>
                         <td>
+                            <!-- IF ELSE BASICO PARA VER SI ES ADMIN O EL DUEÑO, SI NO LO ES MOSTRAMOS UN CANDADO -->
                             <button
                                 v-if="props.usuario.rol == 'Administrador' || res.usuario_login == usuarioLogeado.login"
                                 @click="eliminarReserva(res)" class="btn-danger">

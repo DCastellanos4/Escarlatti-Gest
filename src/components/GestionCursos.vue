@@ -7,18 +7,18 @@
 import { ref, onMounted } from 'vue'
 
 // --- ESTADO REACTIVO ---
-const cursos = ref([])
-const profesores = ref([])
-const etapas = ref([])
-const turnos = ref([])
-const alumnos = ref([])
-const espacios = ref([])
+const cursos = ref([]) //TABLA CURSOS
+const profesores = ref([]) //TABLA PROFESORES
+const etapas = ref([]) //TABLA ETAPAS
+const turnos = ref([]) //TABLA TURNOS
+const alumnos = ref([]) //TABLA ALUMNOS
+const espacios = ref([])//TABLA ESPACIOS
 
-// Control de UI para el modal de listado de alumnos
+// CONTROL DE INTERFAZ PARA VER EL CUADRO DE ALUMNOS POR CURSO
 const cursoVerAlumnos = ref(null)
 const mostrarModalAlumnos = ref(false)
 
-// Modelo para el formulario 
+// MODELO PARA EL CURSO
 const nuevoCurso = ref({
     id: '',
     nombre_curso: '',
@@ -33,8 +33,8 @@ const nuevoCurso = ref({
 })
 
 /**
- * Carga inicial de datos. 
- * Usamos Promise.all para traer todas las tablas maestras de golpe.
+ * CARGA INICIAL DE DATOS
+ * USAMOS PROMISE ALL PARA TRAER TODAS LAS TABLAS DE GOLPE
  */
 const cargarDatos = async () => {
     try {
@@ -58,19 +58,15 @@ const cargarDatos = async () => {
     }
 }
 
+
 /**
- * Registra un nuevo curso con lógica de validación
- */
-/**
- * Registra un nuevo curso con lógica de validación corregida
+ * REGISTRA UN NUEVO CURSO CON LOGICA DE VALIDACION 
  */
 const guardarCurso = async () => {
-    // 1. CÁLCULO MANUAL DEL ID (Prevenir duplicados)
-    const idsNumericos = cursos.value.map(c => Number(c.id));
-    const maxIdExistente = idsNumericos.length > 0 ? Math.max(...idsNumericos) : 0;
-    const nuevoId = (maxIdExistente + 1).toString();
+    // 1. CÁLCULO MANUAL DEL ID (PROBLEMAS CON BBDD)
+    const nuevoId = (Math.max(0, ...cursos.value.map(c => Number(c.id) || 0)) + 1);
 
-    // 2. VALIDACIÓN DE TUTORÍA ÚNICA
+    // VALIDACION DE TUTOR UNICO
     const tutorOcupado = cursos.value.find(c =>
         Number(c.tutor_id) === Number(nuevoCurso.value.tutor_id) &&
         c.anio_academico === nuevoCurso.value.anio_academico
@@ -81,8 +77,7 @@ const guardarCurso = async () => {
         return;
     }
 
-    // 3. CONSTRUCCIÓN DEL OBJETO LIMPIO (Payload)
-    // Enviamos exactamente lo que la API espera para evitar Error 400/500
+    //CONSTRUCCIÓN DEL OBJETO 
     const datosFinales = {
         id: nuevoId,
         nombre_curso: nuevoCurso.value.nombre_curso,
@@ -94,7 +89,7 @@ const guardarCurso = async () => {
         aula_id: nuevoCurso.value.aula_id,
         zusuario: "DC4" // Requisito de tu API en el body
     };
-
+    //LO ENVIAMOS CON POST
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/cursos?zusuario=DC4', {
             method: 'POST',
@@ -104,15 +99,15 @@ const guardarCurso = async () => {
 
         if (respuesta.ok) {
             alert(`Curso creado con éxito (ID asignado: ${nuevoId})`);
-            
-            // Reset del formulario a estado inicial
+
+            // RESET DEL FORMULARIO
             nuevoCurso.value = {
                 id: '', nombre_curso: '', etapa_id: '', grupo: '',
                 turno_id: '', anio_academico: '', tutor_id: '', aula_id: '',
                 zfecha: new Date().toISOString(), zusuario: "DC4"
             };
-            
-            // Recarga obligatoria para actualizar el estado global
+
+            // ACTUALIZAMOS LA VISUAL DE LA TABLA
             await cargarDatos();
         } else {
             const errorData = await respuesta.json();
@@ -132,7 +127,7 @@ const verAlumnos = (curso) => {
 };
 
 /**
- * Lógica de borrado con protección de integridad 
+ * BORRADO CON PROTECTION DE FK
  */
 const intentarBorrarCurso = async (id) => {
     //NO PERMITE BORRAR SI EL CURSO TIENE ALUMNOS
@@ -180,7 +175,7 @@ onMounted(cargarDatos);
 
             <select v-model="nuevoCurso.tutor_id" required>
                 <option value="" disabled>-- Asignar Tutor/a --</option>
-                <option v-for="p in profesores" :key="p.id" :value="p.id">
+                <option v-for="p in profesores" :key="p.id" :value="p.dni_nie">
                     {{ p.nombre }} {{ p.apellidos }}
                 </option>
             </select>
@@ -216,11 +211,12 @@ onMounted(cargarDatos);
                 </tbody>
             </table>
         </div>
-
+        <!-- FILTRO REAL DE ALUMNOS SOLO MUESTRA LOS ALUMNOS QUE ESTAN LINKEADOS A UN CURSO -->
         <div v-if="mostrarModalAlumnos" class="modal-overlay">
             <div class="modal-box">
                 <h4>Alumnos matriculados en {{ cursoVerAlumnos?.nombre_curso }}</h4>
                 <div class="lista-scroll">
+                    <!-- AL HACER CLICK EN VER ALUMNOS, SE MUESTRA LA LISTA DE ALUMNOS EN TIEMPO REAL QUE EL IDCURSO = CURSOSELECCIONADO -->
                     <ul v-if="alumnos.filter(a => Number(a.curso_id) === Number(cursoVerAlumnos?.id)).length > 0">
                         <li v-for="a in alumnos.filter(a => Number(a.curso_id) === Number(cursoVerAlumnos?.id))"
                             :key="a.id">

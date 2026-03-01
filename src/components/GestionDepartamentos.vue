@@ -8,7 +8,7 @@ import { ref, onMounted } from 'vue'
 const departamentos = ref([])
 const profesores = ref([])
 
-// Modelo ajustado a tu captura: id (texto), nombre, ubicacion, correo_contacto
+// Modelo DE DEPARTAMENTO NUEVO
 const nuevoDep = ref({
     id: '',
     nombre: '',
@@ -16,17 +16,18 @@ const nuevoDep = ref({
     correo_contacto: '',
     zusuario: 'DC4'
 })
-const depEditando = ref(null)
+const depEditando = ref(null) //BOOLEANO PARA MOSTRAR LA EDICION DEL DEPARTAMENTO
 
 const cargarDatos = async () => {
     try {
+        //CARGAMOS LAS 2 TABLAS DE LA API
         const [resDep, resProf] = await Promise.all([
             fetch('http://44.207.19.239:3000/departamentos?zusuario=DC4'),
             fetch('http://44.207.19.239:3000/profesores?zusuario=DC4')
         ]);
 
         const dataDep = await resDep.json();
-        // Ordenamos por el código ID alfabéticamente
+        // ORDENAMOS ALFABETICAMENTE POR EL CODIGO
         departamentos.value = dataDep.sort((a, b) => a.id.localeCompare(b.id));
         profesores.value = await resProf.json();
     } catch (error) {
@@ -35,7 +36,7 @@ const cargarDatos = async () => {
 }
 
 const guardarDepartamento = async () => {
-    // Verificamos si el código ya existe
+    // VERIFICAMOS SI EL CODIGO YA EXISTE
     const existe = departamentos.value.find(d => d.id.toUpperCase() === nuevoDep.value.id.toUpperCase());
     if (existe) {
         alert("El código de Departamento ya existe.");
@@ -43,13 +44,13 @@ const guardarDepartamento = async () => {
     }
 
     const datosFinales = {
-        id: nuevoDep.value.id.toUpperCase(),
+        id: nuevoDep.value.id.toUpperCase(), //CODIGO SIEMPRE EN MAYUSCULAS
         nombre: nuevoDep.value.nombre,
         ubicacion: nuevoDep.value.ubicacion,
         correo_contacto: nuevoDep.value.correo_contacto,
         zusuario: 'DC4'
     };
-
+    //LO MANDAMOS CON POST
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/departamentos?zusuario=DC4', {
             method: 'POST',
@@ -58,6 +59,7 @@ const guardarDepartamento = async () => {
         });
 
         if (respuesta.ok) {
+            //RESETAMOS EL FORMULARIO  Y SACAMOS UN ALERT DE EXITO
             alert("Departamento registrado con éxito.");
             nuevoDep.value = { id: '', nombre: '', ubicacion: '', correo_contacto: '', zusuario: 'DC4' };
             await cargarDatos();
@@ -68,11 +70,12 @@ const guardarDepartamento = async () => {
 }
 
 const actualizarDepartamento = async () => {
+    //MOSTRAMOS EN EL FORMULARIO LOS DATOS DEL QUE ESTAMOS EDITANDO
     const datosFinales = {
         ...depEditando.value,
         zusuario: 'DC4'
     };
-
+    //UNA VEZ MODIFICADO LO MANDAMOS CON PUT
     try {
         const res = await fetch(`http://44.207.19.239:3000/departamentos/${depEditando.value.id}?zusuario=DC4`, {
             method: 'PUT',
@@ -81,6 +84,7 @@ const actualizarDepartamento = async () => {
         });
 
         if (res.ok) {
+            //BOOLEANO DE EDICION A FALSE PARA SALIR DE ESE MENU
             depEditando.value = null;
             await cargarDatos();
         }
@@ -90,7 +94,7 @@ const actualizarDepartamento = async () => {
 }
 
 const borrarDepartamento = async (id) => {
-    // Comprobamos si hay profesores vinculados al código de departamento
+    // COMPROBAMOS QUE NO HAYA PROFESORES VINCULADOS A ESE DEPARTAMENTO
     const tieneProfesores = profesores.value.some(p => p.departamento_id === id);
 
     if (tieneProfesores) {
@@ -103,7 +107,7 @@ const borrarDepartamento = async (id) => {
         await cargarDatos();
     }
 }
-
+//CAMBIAR EL ESTADO DEL MENU DE EDICION
 const iniciarEdicion = (dep) => { depEditando.value = { ...dep }; }
 const cancelarEdicion = () => { depEditando.value = null; }
 
@@ -118,6 +122,7 @@ onMounted(cargarDatos);
 
         <form @submit.prevent="depEditando ? actualizarDepartamento() : guardarDepartamento()" class="form-grid">
             <input v-if="!depEditando" v-model="nuevoDep.id" placeholder="Código ID (ej. INF)" required>
+            <!-- SI ESTAMOS EDITANDO EL DEPARTAMENTO DESABILITAMOS CAMBIAR EL ID PORQUE ES PK Y ROMPERIA LAS RELACIONES QUE TIENE -->
             <input v-else v-model="depEditando.id" disabled>
 
             <input v-if="!depEditando" v-model="nuevoDep.nombre" placeholder="Nombre (ej. Informática)" required>

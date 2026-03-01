@@ -25,7 +25,7 @@ const emit = defineEmits(['logout']);
 const seccionActual = ref('menu');
 
 onMounted(() => {
-    // Imprimimos la estructura exacta que devuelve tu API por consola
+    // DEBUG
     console.log("--- RESPUESTA API RECIBIDA ---");
     console.log("Mensaje:", props.usuario.mensaje);
     console.log("Login:", props.usuario.usuario);
@@ -69,7 +69,7 @@ const irAMenu = () => seccionActual.value = 'menu';
                 <button @click="seccionActual = 'resolver'" class="btn-success">Resolver Incidencias</button>
 
             </section>
-
+            <!-- DEPENDE DEL BOTON QUE SE PULSE SE RENDERIZA UN COMPONENTE O OTRO -->
             <section v-if="usuario.rol == 'Administrador'" class="admin-zone">
                 <h4>Mantenimiento de Tablas (Acceso Total)</h4>
                 <div class="admin-buttons-container">
@@ -88,7 +88,7 @@ const irAMenu = () => seccionActual.value = 'menu';
                 </p>
             </section>
         </div>
-
+        <!-- LISTA DE COMPONENTES RENDERIZADOS -->
         <div v-else class="content-view">
             <component :is="{
                 profesores: Profesores,

@@ -6,14 +6,14 @@
  */
 import { ref, onMounted, computed } from 'vue'
 
-// --- ESTADO REACTIVO ---
-const usuarios = ref([])
-const profesores = ref([])
-const alumnos = ref([])
-const roles = ref([])
-const estados = ref([])
-const usuarioEditando = ref(null)
+const usuarios = ref([]) //ARRAY DE USUARIOS
+const profesores = ref([]) //ARRAY DE PROFESORES
+const alumnos = ref([]) //ARRAY DE ALUMNOS
+const roles = ref([]) //ARRAY DE ROLES
+const estados = ref([]) //ARRAY DE ESTADOS
+const usuarioEditando = ref(null) //BOOLEANO DE EDICION
 
+//MODELO DE USUARIO
 const modeloUsuario = ref({
     login: '',
     password_hash: '',
@@ -25,7 +25,7 @@ const modeloUsuario = ref({
 })
 
 /**
- * Carga masiva de datos para resolver las FK (Foreign Keys)
+ * CARGA MASIVA PARA LA RESOLUCION DE FK
  */
 const cargarDatos = async () => {
     try {
@@ -48,8 +48,7 @@ const cargarDatos = async () => {
 }
 
 /**
- * Lista combinada de identidades (DNI de profes + NIA de alumnos)
- * para el selector de ref_identidad_fk
+ * LISTA COMBINADA DE ALUMNOS Y PROFESORES, BUSCA EN CADA UNA DE LAS TABLAS Y TRAE TODOS LOS PROFESORES Y ALUMNOS REGISTRADOS
  */
 const listaIdentidades = computed(() => {
     const profesMap = profesores.value.map(p => ({ id: p.dni_nie, nombre: `[PROF] ${p.nombre} ${p.apellidos}` }));
@@ -61,17 +60,18 @@ const listaIdentidades = computed(() => {
  * Guardar o Actualizar Usuario
  */
 const procesarFormulario = async () => {
+    //PROCESAMIENTO DE EDICION O INSERCION
     const esEdicion = !!usuarioEditando.value;
     const origen = esEdicion ? usuarioEditando.value : modeloUsuario.value;
 
-    // PAYLOAD LIMPIO: Evitamos enviar campos basura a la API
+    // OBJETO A INSESRTAR
     const datosFinales = {
         login: origen.login,
         password_hash: origen.password_hash,
         rol_id: origen.rol_id,
         ref_identidad_fk: origen.ref_identidad_fk,
         estado_id: origen.estado_id,
-        ultimo_acceso: origen.ultimo_acceso, // Siempre null en creación
+        ultimo_acceso: origen.ultimo_acceso, 
         zusuario: 'DC4'
     };
 
@@ -99,14 +99,14 @@ const procesarFormulario = async () => {
         alert("Fallo de red.");
     }
 }
-
+//BORRADO BASICO CON CONFIRMACION
 const borrarUsuario = async (login) => {
     if (confirm(`¿Eliminar la cuenta de ${login}?`)) {
         await fetch(`http://44.207.19.239:3000/usuarios/${login}?zusuario=DC4`, { method: 'DELETE' });
         await cargarDatos();
     }
 }
-
+//CONTROL DE INTERFAZ DE EDICION
 const iniciarEdicion = (u) => { usuarioEditando.value = { ...u }; }
 const cancelarAccion = () => {
     usuarioEditando.value = null;

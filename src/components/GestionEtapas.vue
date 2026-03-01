@@ -5,20 +5,20 @@
  */
 import { ref, onMounted } from 'vue'
 
-const listaEtapas = ref([])
-const etapaEnEdicion = ref(null)
+const listaEtapas = ref([]) //ARRAY DE ETAPAS
+const etapaEnEdicion = ref(null) //BOOLEANO DE EDICION
 
-// Modelo inicializado con zusuario para consistencia
+// MODELO BASICO DE ETAPA
 const modeloEtapa = ref({ id: '', nombre: '', descripcion: '', zusuario: 'DC4' })
 
 /**
- * Carga las etapas desde la API.
+ * CARGA LAS ETAPAS DESDE LA API
  */
 const sincronizarEtapas = async () => {
     try {
         const respuesta = await fetch('http://44.207.19.239:3000/etapas?zusuario=DC4')
         const datos = await respuesta.json()
-        // Ordenamos alfabéticamente por el código ID
+        // Ordenamos alfabéticamente por el codigo ID
         listaEtapas.value = datos.sort((a, b) => a.id.localeCompare(b.id))
     } catch (error) {
         console.error("Fallo al sincronizar etapas:", error);
@@ -26,27 +26,32 @@ const sincronizarEtapas = async () => {
 }
 
 /**
- * Procesa el formulario. Decide si crear (POST) o actualizar (PUT).
+ * PROCESA EL FORMULARIO Y DECIDE SI USAR PUT PARA ACTUALIZAR O POST PARA ENVIAR
  */
 const procesarFormulario = async () => {
     const esEdicion = !!etapaEnEdicion.value;
     const origen = esEdicion ? etapaEnEdicion.value : modeloEtapa.value;
 
-    // Al igual que en Roles, el ID ahora es un código (ej: DAW)
-    // No calculamos maxId porque el usuario debe escribir el código
-
+    // ID CON LETRAS MAYUSCULAS
+    //VALIDACION DE DUPLICIDAD DE ID'S
+    const duplicado = listaEtapas.value.find(a => a.id === modeloEtapa.value.id);
+    if (duplicado) {
+        alert("El ID ya existe.");
+        return;
+    }
     const datosParaEnviar = {
-        id: origen.id.toUpperCase(), // Forzamos mayúsculas para los códigos
+        id: origen.id.toUpperCase(), // MAYUSCULAS PARA EL CODIGO
         nombre: origen.nombre,
         descripcion: origen.descripcion,
-        zusuario: 'DC4' // REQUISITO: zusuario en el cuerpo
+        zusuario: 'DC4'
     };
-
+    //A PARTIR DE AQUI SE DECIDE SI SE VA A EDITAR UN REGISTRO O INSERTAR UNO NUEVO
+    //CUANDO SE PULSA EL BOTON DE EDICION, SE ELIGE EL METODO PUT, Y SINO SE HA PULSADO SERA POST POR DEFECTO
     const metodo = esEdicion ? 'PUT' : 'POST';
     const url = esEdicion
         ? `http://44.207.19.239:3000/etapas/${origen.id}?zusuario=DC4`
         : 'http://44.207.19.239:3000/etapas?zusuario=DC4';
-
+    //ENVIAMOS EL METODO A LA API
     try {
         const respuesta = await fetch(url, {
             method: metodo,
@@ -55,6 +60,7 @@ const procesarFormulario = async () => {
         });
 
         if (respuesta.ok) {
+            //DEPENDIENDO DE SI ES EDICION O NO SE MUESTRA UN ALERT PERSONALIZADO Y SE CANCELA LA EDICION
             alert(esEdicion ? "Etapa actualizada correctamente" : "Etapa registrada con éxito");
             cancelarAccion();
             await sincronizarEtapas();
@@ -68,10 +74,11 @@ const procesarFormulario = async () => {
 }
 
 /**
- * Elimina una etapa si el usuario confirma.
+ * ELIMINACION DE ETAPAS CON CONFIRMACION
  */
 const eliminarRegistro = async (id) => {
     if (confirm(`¿Seguro que quieres borrar la etapa ${id}?`)) {
+        // SI SE CONFIRMA MANDAMOS UN METODO DELETE
         try {
             const respuesta = await fetch(`http://44.207.19.239:3000/etapas/${id}?zusuario=DC4`, { method: 'DELETE' });
 
@@ -86,7 +93,7 @@ const eliminarRegistro = async (id) => {
     }
 }
 
-// --- GESTIÓN DE UI ---
+// --- METODOS PARA LA GESTION DE LA INTERFAZ EN EDICION ---
 const prepararEdicion = (etapa) => { etapaEnEdicion.value = { ...etapa }; }
 const cancelarAccion = () => {
     etapaEnEdicion.value = null;

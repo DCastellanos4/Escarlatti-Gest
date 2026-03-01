@@ -5,15 +5,15 @@
  */
 import { ref, onMounted } from 'vue'
 
-const props = defineProps(['usuario']);
+const props = defineProps(['usuario']);// TRAEMOS EL USUARIO LOGEADO DE ADMINPANEL
 
-const incidencias = ref([]);
-const espacios = ref([]);
-const estados = ref([]);
+const incidencias = ref([]); //LISTA DE INCIDENCIAS
+const espacios = ref([]); //LISTA DE AULAS
+const estados = ref([]); //LISTA DE ESTADOS DE INCIDENCIAS
 const incidenciaEnEdicion = ref(null);
 
 /**
- * Carga de datos para visualización
+ * CARGAMOS LOS DATOS PARA VISUALIZARLOS
  */
 const cargarDatos = async () => {
     try {
@@ -31,7 +31,7 @@ const cargarDatos = async () => {
 }
 
 /**
- * Prepara la incidencia para ser editada
+ * PREPARA LA INCIDENCIA PARA SER EDITADA
  */
 const editarIncidencia = (inc) => {
     incidenciaEnEdicion.value = {
@@ -42,23 +42,23 @@ const editarIncidencia = (inc) => {
 }
 
 /**
- * Guarda los cambios (Resolución o Cambio de estado)
+ * GUARDA LOS CAMBIOS YA SEA EL CAMBIO DE ESTADO O LA RESOLUCION EN SI
  */
 const actualizarIncidencia = async () => {
     const id = incidenciaEnEdicion.value.id;
 
     // Si el estado pasa a RESUELTA, registramos la fecha actual
     const fechaRes = incidenciaEnEdicion.value.estado_incidencia_id === 'RESUELTA'
-        ? new Date().toISOString().split('T')[0]
+        ? new Date().toISOString()
         : null;
-
+    //OBJETO A INSERTAR
     const payload = {
         ...incidenciaEnEdicion.value,
         fecha_resolucion: fechaRes, //
         zfecha: new Date().toISOString(),
         zusuario: 'DC4'
     };
-
+    //ACTUALIZMOS LA INCIDENCIA CON LOS DATOS NUEVOS
     try {
         const respuesta = await fetch(`http://44.207.19.239:3000/incidencias/${id}?zusuario=DC4`, {
             method: 'PUT',
@@ -75,7 +75,7 @@ const actualizarIncidencia = async () => {
         alert("Error al actualizar la incidencia.");
     }
 }
-
+//BORRADO BASICO CON CONFIRMACION
 const eliminarIncidencia = async (id) => {
     if (confirm(`¿Eliminar definitivamente la incidencia #${id}?`)) {
         await fetch(`http://44.207.19.239:3000/incidencias/${id}?zusuario=DC4`, { method: 'DELETE' });
@@ -137,6 +137,7 @@ onMounted(cargarDatos);
                         <td>{{espacios.find(e => e.id === inc.espacio_id)?.nombre || inc.espacio_id}}</td>
                         <td class="desc-cell">{{ inc.descripcion_problema }}</td>
                         <td>
+                            <!-- CLASE PERSONALIZADA PARA MOSTRAR LA INSIGNIA -->
                             <span :class="['badge', inc.estado_incidencia_id]">
                                 {{ inc.estado_incidencia_id }}
                             </span>
